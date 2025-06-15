@@ -1,34 +1,45 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #f0f0f0;
-  margin: 0; padding: 0;
+  margin: 0;
+  font-family: sans-serif;
+  background: #f2f2f2;
 }
 .dark-mode {
   background: #121212;
   color: white;
 }
 #app {
-  max-width: 400px;
+  max-width: 480px;
   margin: auto;
-  padding: 20px;
+  padding: 15px;
 }
 input, button {
   width: 100%;
-  padding: 10px;
-  margin-top: 5px;
+  padding: 12px;
+  font-size: 16px;
+  margin: 5px 0;
+  box-sizing: border-box;
+}
+.input-area {
+  display: flex;
+  gap: 5px;
+}
+.input-area input {
+  flex: 1;
 }
 #messages {
+  background: white;
   height: 300px;
   overflow-y: auto;
-  background: white;
   padding: 10px;
-  margin: 10px 0;
+  border-radius: 5px;
+  margin-bottom: 10px;
 }
 .dark-mode #messages {
-  background: #222;
+  background: #1e1e1e;
 }
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 10px;
 }
