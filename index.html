@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ChatApp Gratis</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
@@ -10,21 +11,23 @@
 </head>
 <body>
   <div id="app">
-    <div class="login-screen" id="login">
+    <div id="login">
       <h2>Masuk ke ChatApp</h2>
-      <input type="text" id="username" placeholder="Nama kamu...">
-      <input type="text" id="room" placeholder="Nama grup (default: umum)">
+      <input type="text" id="username" placeholder="Nama kamu">
+      <input type="text" id="room" placeholder="Nama grup (misal: umum)">
       <button onclick="startChat()">Masuk</button>
     </div>
 
-    <div class="chat-screen" id="chat" style="display:none;">
+    <div id="chat" style="display:none;">
       <div class="header">
-        <span id="roomName"></span>
-        <button onclick="toggleDarkMode()">🌓</button>
+        <span id="roomName">Grup: </span>
+        <button onclick="toggleDarkMode()">🌙</button>
       </div>
       <div id="messages"></div>
-      <input type="text" id="messageInput" placeholder="Tulis pesan..." onkeypress="handleKey(event)">
-      <button onclick="sendMessage()">Kirim</button>
+      <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Tulis pesan..." onkeypress="handleKey(event)">
+        <button onclick="sendMessage()">➤</button>
+      </div>
     </div>
   </div>
   <script src="firebase-config.js"></script>
