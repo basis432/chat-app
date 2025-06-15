@@ -1,4 +1,4 @@
-let username = "", room = "umum";
+let username = "", room = "";
 
 function startChat() {
   username = document.getElementById("username").value.trim();
@@ -11,13 +11,11 @@ function startChat() {
 
   db.ref(`rooms/${room}/messages`).on("child_added", (snap) => {
     const data = snap.val();
-    const div = document.createElement("div");
-    div.innerHTML = `<b>${data.user}</b>: ${data.message}`;
-    document.getElementById("messages").appendChild(div);
-    document.getElementById("messages").scrollTop = 99999;
+    const msg = document.createElement("div");
+    msg.innerHTML = `<b>${data.user}</b>: ${data.message}`;
+    document.getElementById("messages").appendChild(msg);
+    document.getElementById("messages").scrollTop = 9999;
   });
-
-  db.ref(`status/${username}`).set("online");
 }
 
 function sendMessage() {
