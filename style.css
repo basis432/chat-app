@@ -12,20 +12,38 @@ body {
   margin: auto;
   padding: 15px;
 }
-input, button {
-  width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  margin: 5px 0;
-  box-sizing: border-box;
-}
 .input-area {
   display: flex;
-  gap: 5px;
+  gap: 8px;
+  margin-top: 10px;
 }
+
 .input-area input {
   flex: 1;
+  height: 48px;
+  font-size: 16px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
 }
+
+.input-area button {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  border-radius: 6px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.input-area button:hover {
+  background-color: #0056b3;
+}
+
 #messages {
   background: white;
   height: 300px;
