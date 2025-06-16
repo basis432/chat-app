@@ -3,28 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chat BBM Style</title>
+  <title>Chat Mirip BBM</title>
   <link rel="stylesheet" href="style.css" />
+  
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script src="firebase-config.js"></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-  <div id="loginSection">
+
+  <!-- Login Section -->
+  <section id="loginSection">
     <h2>Masuk Chat</h2>
     <input id="namaInput" type="text" placeholder="Masukkan nama kamu" />
     <button id="loginBtn">Masuk</button>
-  </div>
+  </section>
 
-  <div id="chatSection" style="display:none;">
+  <!-- Main Chat Section -->
+  <section id="chatSection" style="display:none;">
     <h3>Hai, <span id="userName"></span> (PIN: <span id="userPIN"></span>)</h3>
     <button id="logoutBtn">Keluar</button>
 
-    <div id="chatArea" style="height:300px; overflow-y:auto; border:1px solid #ccc; margin-bottom:10px;"></div>
+    <!-- Permintaan Pertemanan -->
+    <section id="permintaanSection">
+      <h4>Permintaan Pertemanan</h4>
+      <div id="permintaanList"></div>
+    </section>
 
-    <input id="messageInput" type="text" placeholder="Ketik pesan..." />
-    <button id="sendBtn">Kirim</button>
-  </div>
+    <!-- Cari teman dengan PIN -->
+    <section id="cariTemanSection">
+      <h4>Cari dan Tambah Teman</h4>
+      <input id="pinInput" type="text" placeholder="Masukkan PIN teman" maxlength="6" />
+      <button id="btnKirimPermintaan">Kirim Permintaan</button>
+    </section>
+
+    <!-- Daftar Teman -->
+    <section id="friendsSection">
+      <h4>Daftar Teman</h4>
+      <ul id="friendsList"></ul>
+    </section>
+
+    <!-- Area Chat -->
+    <section id="chatAreaSection" style="display:none;">
+      <h4>Chat dengan <span id="chatPartnerName"></span> (PIN: <span id="chatPartnerPIN"></span>)</h4>
+      <div id="chatArea" style="height:300px; overflow-y:auto; border:1px solid #ccc; margin-bottom:10px;"></div>
+      <input id="messageInput" type="text" placeholder="Ketik pesan..." />
+      <button id="sendBtn">Kirim</button>
+      <button id="backToFriendsBtn">Kembali ke Teman</button>
+    </section>
+  </section>
+
 </body>
 </html>
