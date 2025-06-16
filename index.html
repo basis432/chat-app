@@ -3,37 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BBM Clone</title>
+  <title>ChatApp BBM Style</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <div id="loginSection">
-      <h2>Masuk</h2>
-      <input type="text" id="namaInput" placeholder="Masukkan Nama Anda">
+      <h2>Masuk ke Aplikasi</h2>
+      <input id="namaInput" type="text" placeholder="Nama Kamu" onkeydown="if(event.key==='Enter') login()">
       <button onclick="login()">Masuk</button>
     </div>
 
     <div id="chatSection" style="display:none;">
-      <h2>Selamat datang, <span id="namaSaya"></span> (PIN: <span id="pinSaya"></span>)</h2>
-      <p>Status: <span id="statusOnline">🟢 Online</span></p>
-      <h3>Permintaan Teman</h3>
+      <h3>Hai, <span id="userName"></span> (PIN: <span id="userPIN"></span>)</h3>
+      <p>Status: 🟢 Online</p>
+
+      <h4>Permintaan Teman</h4>
       <ul id="permintaanList"></ul>
 
-      <h3>Tambah Teman (PIN)</h3>
-      <input type="text" id="pinTeman" placeholder="PIN teman">
-      <button onclick="kirimPermintaan()">Kirim Permintaan</button>
+      <h4>Tambah Teman (PIN)</h4>
+      <input id="pinInput" type="text" placeholder="PIN teman">
+      <button onclick="kirimPermintaan()">Kirim</button>
 
-      <h3>Teman Saya</h3>
-      <ul id="daftarTeman"></ul>
+      <h4>Teman</h4>
+      <ul id="temanList"></ul>
 
       <div id="chatBox" style="display:none;">
-        <h4>Chat dengan <span id="chatWithPIN"></span></h4>
-        <div id="chatMessages" style="border:1px solid #ccc;height:200px;overflow:auto;padding:10px;margin-bottom:10px;"></div>
-        <input type="text" id="chatInput" placeholder="Ketik pesan..." onkeydown="if(event.key==='Enter') kirimPesan()">
+        <h4>Chat dengan <span id="chatWith"></span></h4>
+        <div id="chatMessages"></div>
+        <input id="chatInput" type="text" placeholder="Ketik..." onkeydown="if(event.key==='Enter') kirimPesan()">
         <button onclick="kirimPesan()">Kirim</button>
       </div>
     </div>
