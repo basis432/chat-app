@@ -10,12 +10,14 @@ body {
   margin: auto;
 }
 
-input, button {
+input,
+button {
   width: 100%;
   padding: 10px;
   margin-top: 5px;
   margin-bottom: 10px;
   font-size: 16px;
+  box-sizing: border-box;
 }
 
 button {
@@ -23,13 +25,35 @@ button {
   color: white;
   border: none;
   cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #08c;
 }
 
 #chatMessages {
-  height: 200px;
-  overflow-y: scroll;
+  height: 250px;
+  overflow-y: auto;
   border: 1px solid #555;
   padding: 10px;
   background: #222;
   margin-bottom: 10px;
+  white-space: pre-wrap;
+}
+
+ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+li {
+  margin-bottom: 8px;
+}
+
+li button {
+  width: auto;
+  padding: 5px 10px;
+  font-size: 14px;
+  margin-left: 10px;
 }
