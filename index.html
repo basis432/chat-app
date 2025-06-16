@@ -23,6 +23,16 @@
 <button onclick="sendFriendRequest()">Kirim Permintaan</button>
 
 <div id="requests-container"></div>
+<hr>
+<h3>Daftar Teman</h3>
+<div id="friends-list"></div>
+
+<hr>
+<h3>Chat</h3>
+<div id="chat-room" style="border:1px solid #555; padding:10px; height:300px; overflow-y:auto; background:#222; color:#eee;"></div>
+
+<input type="text" id="chat-input" placeholder="Ketik pesan..." style="width:80%;" />
+<button onclick="sendMessage()">Kirim</button>
 
       <p>Selamat datang, <span id="user-email"></span></p>
       <p><strong>PIN Anda:</strong> <span id="user-pin"></span></p>
