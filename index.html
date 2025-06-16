@@ -2,35 +2,38 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ChatApp Gratis</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BBM Clone</title>
   <link rel="manifest" href="manifest.json">
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <div id="login">
-      <h2>Masuk ke ChatApp</h2>
-      <input type="text" id="username" placeholder="Nama kamu">
-      <input type="text" id="room" placeholder="Nama grup (misal: umum)">
-      <button onclick="startChat()">Masuk</button>
-    </div>
 
-    <div id="chat" style="display:none;">
-      <div class="header">
-        <span id="roomName">Grup: </span>
-        <button onclick="toggleDarkMode()">🌙</button>
-      </div>
-      <div id="messages"></div>
-      <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Tulis pesan..." onkeypress="handleKey(event)">
-        <button onclick="sendMessage()">➤</button>
-      </div>
-    </div>
+  <div id="login">
+    <h2>Masuk BBM Clone</h2>
+    <input type="text" id="nameInput" placeholder="Masukkan Nama">
+    <button onclick="registerUser()">Masuk</button>
   </div>
+
+  <div id="dashboard" style="display:none;">
+    <h2>Halo, <span id="displayName"></span></h2>
+    <p>PIN kamu: <strong id="userPIN"></strong></p>
+
+    <h3>Kirim Permintaan Chat</h3>
+    <input type="text" id="targetPIN" placeholder="Masukkan PIN tujuan">
+    <button onclick="kirimPermintaan()">Kirim Permintaan</button>
+
+    <h3>Permintaan Masuk</h3>
+    <ul id="daftarPermintaanMasuk"></ul>
+
+    <h3>Teman</h3>
+    <ul id="daftarTeman"></ul>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
+
 </body>
 </html>
