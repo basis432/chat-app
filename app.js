@@ -1,96 +1,113 @@
-function generatePIN() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  return chars[Math.floor(Math.random() * 26)] +
-         chars[Math.floor(Math.random() * 26)] +
-         Math.floor(1000 + Math.random() * 9000);
-}
+let nama = "", pin = "", chatPartner = "";
 
-function registerUser() {
-  const name = document.getElementById('nameInput').value.trim();
-  if (!name) return alert('Nama tidak boleh kosong');
-  const pin = generatePIN();
+// Fungsi login
+function login() {
+  nama = document.getElementById("namaInput").value.trim();
+  if (!nama) return alert("Nama tidak boleh kosong");
 
-  db.ref('users/' + pin).set({
-    name: name,
-    pin: pin,
+  pin = Math.floor(100000 + Math.random() * 900000).toString();
+  localStorage.setItem("nama", nama);
+  localStorage.setItem("pin", pin);
+
+  db.ref("users/" + pin).set({
+    nama: nama,
+    online: true,
     friends: {},
-    requests: { from: {}, to: {} }
-  }).then(() => {
-    localStorage.setItem('pin', pin);
-    localStorage.setItem('name', name);
-    showDashboard();
+    requests: {}
   });
-}
 
-function showDashboard() {
-  const name = localStorage.getItem('name');
-  const pin = localStorage.getItem('pin');
-  if (!name || !pin) return;
+  document.getElementById("loginSection").style.display = "none";
+  document.getElementById("chatSection").style.display = "block";
+  document.getElementById("namaSaya").textContent = nama;
+  document.getElementById("pinSaya").textContent = pin;
 
-  document.getElementById('login').style.display = 'none';
-  document.getElementById('dashboard').style.display = 'block';
-  document.getElementById('displayName').innerText = name;
-  document.getElementById('userPIN').innerText = pin;
-
-  listenPermintaanMasuk();
+  listenPermintaan();
   loadTeman();
 }
 
+// Kirim permintaan teman
 function kirimPermintaan() {
-  const targetPIN = document.getElementById('targetPIN').value.trim();
-  const userPIN = localStorage.getItem('pin');
-  if (!targetPIN || targetPIN === userPIN) return;
-
-  db.ref('users/' + targetPIN).get().then(snap => {
-    if (!snap.exists()) return alert("PIN tidak ditemukan.");
-
-    db.ref('users/' + targetPIN + '/requests/from/' + userPIN).set(true);
-    db.ref('users/' + userPIN + '/requests/to/' + targetPIN).set(true);
-    alert('Permintaan terkirim ke ' + targetPIN);
-  });
+  const targetPIN = document.getElementById("pinTeman").value.trim();
+  if (!targetPIN || targetPIN === pin) return;
+  db.ref("users/" + targetPIN + "/requests/" + pin).set(nama);
 }
 
-function listenPermintaanMasuk() {
-  const userPIN = localStorage.getItem('pin');
-  db.ref('users/' + userPIN + '/requests/from').on('value', snap => {
+// Pantau permintaan masuk
+function listenPermintaan() {
+  db.ref("users/" + pin + "/requests").on("value", snap => {
+    const list = document.getElementById("permintaanList");
+    list.innerHTML = "";
     const data = snap.val() || {};
-    const list = document.getElementById('daftarPermintaanMasuk');
-    list.innerHTML = '';
-    for (let fromPIN in data) {
-      const li = document.createElement('li');
-      li.innerHTML = `${fromPIN} <button onclick="terimaTeman('${fromPIN}')">Terima</button>`;
+    for (let dari in data) {
+      const li = document.createElement("li");
+      li.textContent = `${data[dari]} (${dari}) `;
+      const btn = document.createElement("button");
+      btn.textContent = "Terima";
+      btn.onclick = () => terimaTeman(dari, data[dari]);
+      li.appendChild(btn);
       list.appendChild(li);
     }
   });
 }
 
-function terimaTeman(otherPIN) {
-  const userPIN = localStorage.getItem('pin');
-  db.ref('users/' + userPIN + '/friends/' + otherPIN).set(true);
-  db.ref('users/' + otherPIN + '/friends/' + userPIN).set(true);
-  db.ref('users/' + userPIN + '/requests/from/' + otherPIN).remove();
-  db.ref('users/' + otherPIN + '/requests/to/' + userPIN).remove();
+// Terima permintaan teman
+function terimaTeman(pinTeman, namaTeman) {
+  db.ref("users/" + pin + "/friends/" + pinTeman).set(namaTeman);
+  db.ref("users/" + pinTeman + "/friends/" + pin).set(nama);
+  db.ref("users/" + pin + "/requests/" + pinTeman).remove();
 }
 
+// Muat daftar teman
 function loadTeman() {
-  const userPIN = localStorage.getItem('pin');
-  db.ref('users/' + userPIN + '/friends').on('value', snap => {
+  db.ref("users/" + pin + "/friends").on("value", snap => {
+    const list = document.getElementById("daftarTeman");
+    list.innerHTML = "";
     const data = snap.val() || {};
-    const list = document.getElementById('daftarTeman');
-    list.innerHTML = '';
-    for (let pin in data) {
-      const li = document.createElement('li');
-      li.textContent = pin;
+    for (let p in data) {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.textContent = `Chat ${data[p]} (${p})`;
+      btn.onclick = () => bukaChat(p);
+      li.appendChild(btn);
       list.appendChild(li);
     }
   });
 }
 
-document.getElementById('masukBtn').addEventListener('click', registerUser);
-document.getElementById('nameInput').addEventListener('keypress', function (e) {
-  if (e.key === 'Enter') registerUser();
-});
+// Buka jendela chat
+function bukaChat(partnerPIN) {
+  chatPartner = partnerPIN;
+  document.getElementById("chatBox").style.display = "block";
+  document.getElementById("chatWithPIN").textContent = partnerPIN;
+  tampilkanChat();
+}
 
-if (localStorage.getItem('pin')) {
-  showDashboard();
+// Tampilkan pesan chat
+function tampilkanChat() {
+  const chatID = [pin, chatPartner].sort().join("_");
+  db.ref("chats/" + chatID).on("value", snap => {
+    const messages = snap.val() || {};
+    const chatBox = document.getElementById("chatMessages");
+    chatBox.innerHTML = "";
+    for (let id in messages) {
+      const msg = messages[id];
+      const div = document.createElement("div");
+      div.textContent = `[${msg.from}] ${msg.text}`;
+      chatBox.appendChild(div);
+    }
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+}
+
+// Kirim pesan
+function kirimPesan() {
+  const isi = document.getElementById("chatInput").value.trim();
+  if (!isi || !chatPartner) return;
+  const chatID = [pin, chatPartner].sort().join("_");
+  db.ref("chats/" + chatID).push({
+    from: pin,
+    text: isi,
+    time: Date.now()
+  });
+  document.getElementById("chatInput").value = "";
 }
