@@ -19,6 +19,8 @@ function registerUser() {
     localStorage.setItem('pin', pin);
     localStorage.setItem('name', name);
     showDashboard();
+  }).catch(err => {
+    alert('Gagal menyimpan ke Firebase: ' + err.message);
   });
 }
 
@@ -38,10 +40,15 @@ function kirimPermintaan() {
   const targetPIN = document.getElementById('targetPIN').value.trim();
   const userPIN = localStorage.getItem('pin');
   if (targetPIN === userPIN) return alert("Tidak bisa kirim ke diri sendiri.");
+  if (!targetPIN) return alert("PIN tujuan kosong.");
 
-  db.ref('users/' + targetPIN + '/requests/from/' + userPIN).set(true);
-  db.ref('users/' + userPIN + '/requests/to/' + targetPIN).set(true);
-  alert('Permintaan terkirim ke ' + targetPIN);
+  db.ref('users/' + targetPIN).get().then(snap => {
+    if (!snap.exists()) return alert("PIN tidak ditemukan.");
+    // simpan permintaan
+    db.ref('users/' + targetPIN + '/requests/from/' + userPIN).set(true);
+    db.ref('users/' + userPIN + '/requests/to/' + targetPIN).set(true);
+    alert('Permintaan terkirim ke ' + targetPIN);
+  });
 }
 
 function listenPermintaanMasuk() {
@@ -62,11 +69,9 @@ function listenPermintaanMasuk() {
 function terimaTeman(otherPIN) {
   const userPIN = localStorage.getItem('pin');
 
-  // Tambahkan ke daftar teman masing-masing
   db.ref('users/' + userPIN + '/friends/' + otherPIN).set(true);
   db.ref('users/' + otherPIN + '/friends/' + userPIN).set(true);
 
-  // Hapus permintaan
   db.ref('users/' + userPIN + '/requests/from/' + otherPIN).remove();
   db.ref('users/' + otherPIN + '/requests/to/' + userPIN).remove();
 }
@@ -88,3 +93,12 @@ function loadTeman() {
 if (localStorage.getItem('pin')) {
   showDashboard();
 }
+
+document.getElementById('masukBtn').addEventListener('click', registerUser);
+
+// 👉 ENTER support
+document.getElementById('nameInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    registerUser();
+  }
+});
