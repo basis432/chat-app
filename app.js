@@ -1,4 +1,5 @@
 let currentUser = null;
+let currentChatFriendId = null;
 
 // Deteksi login/logout
 firebase.auth().onAuthStateChanged((user) => {
@@ -10,7 +11,13 @@ firebase.auth().onAuthStateChanged((user) => {
 
     // Cek atau buat PIN
     generateOrLoadPIN(user.uid);
+
+    // Load permintaan teman dan daftar teman
+    loadFriendRequests();
+    loadFriendsList();
+
   } else {
+    currentUser = null;
     document.getElementById('login-container').style.display = 'block';
     document.getElementById('chat-container').style.display = 'none';
   }
@@ -72,7 +79,13 @@ function generateOrLoadPIN(uid) {
 // Fungsi pembuat PIN BBM unik 6 digit
 function generatePIN() {
   return Math.floor(100000 + Math.random() * 900000).toString();
-  function sendFriendRequest() {
+}
+
+// ------------------
+// Permintaan Teman
+// ------------------
+
+function sendFriendRequest() {
   const pin = document.getElementById('friend-pin').value.trim();
 
   // Cek apakah PIN valid dan bukan milik sendiri
@@ -104,6 +117,11 @@ function loadFriendRequests() {
     const container = document.getElementById('requests-container');
     container.innerHTML = "<h4>Permintaan Masuk:</h4>";
 
+    if (!snapshot.exists()) {
+      container.innerHTML += "<p>Tidak ada permintaan teman.</p>";
+      return;
+    }
+
     snapshot.forEach(child => {
       const fromId = child.key;
       const email = child.val().email;
@@ -128,4 +146,90 @@ function acceptRequest(fromId, email) {
   alert("Sekarang kamu dan " + email + " sudah berteman!");
 }
 
+// ------------------
+// Daftar Teman & Chat
+// ------------------
+
+function loadFriendsList() {
+  const friendsRef = firebase.database().ref(`users/${currentUser.uid}/friends`);
+  friendsRef.on('value', snapshot => {
+    const friendsListEl = document.getElementById('friends-list');
+    friendsListEl.innerHTML = '';
+
+    if (!snapshot.exists()) {
+      friendsListEl.innerHTML = '<p>Tidak ada teman.</p>';
+      return;
+    }
+
+    snapshot.forEach(child => {
+      const friendId = child.key;
+      const friendEmail = child.val().email;
+
+      const friendEl = document.createElement('div');
+      friendEl.style.cursor = 'pointer';
+      friendEl.style.padding = '8px';
+      friendEl.style.borderBottom = '1px solid #444';
+      friendEl.textContent = friendEmail;
+      friendEl.onclick = () => openChat(friendId, friendEmail);
+
+      friendsListEl.appendChild(friendEl);
+    });
+  });
+}
+
+function openChat(friendId, friendEmail) {
+  currentChatFriendId = friendId;
+  const chatRoomEl = document.getElementById('chat-room');
+  chatRoomEl.innerHTML = `<b>Chat dengan ${friendEmail}</b><br><br>`;
+
+  // Load pesan realtime
+  const chatId = getChatId(currentUser.uid, friendId);
+  const messagesRef = firebase.database().ref(`chats/${chatId}`);
+  messagesRef.off(); // hapus listener lama
+  messagesRef.on('child_added', snapshot => {
+    const msg = snapshot.val();
+    displayMessage(msg);
+  });
+}
+
+function sendMessage() {
+  const inputEl = document.getElementById('chat-input');
+  const text = inputEl.value.trim();
+  if (text === '' || !currentChatFriendId) return;
+
+  const chatId = getChatId(currentUser.uid, currentChatFriendId);
+  const messagesRef = firebase.database().ref(`chats/${chatId}`);
+
+  const msgData = {
+    sender: currentUser.uid,
+    text: text,
+    timestamp: Date.now()
+  };
+
+  messagesRef.push(msgData);
+  inputEl.value = '';
+}
+
+function displayMessage(msg) {
+  const chatRoomEl = document.getElementById('chat-room');
+  const isSender = msg.sender === currentUser.uid;
+
+  const msgEl = document.createElement('div');
+  msgEl.style.padding = '6px 10px';
+  msgEl.style.marginBottom = '6px';
+  msgEl.style.maxWidth = '70%';
+  msgEl.style.borderRadius = '10px';
+  msgEl.style.clear = 'both';
+  msgEl.style.backgroundColor = isSender ? '#00aaff' : '#444';
+  msgEl.style.color = '#fff';
+  msgEl.style.float = isSender ? 'right' : 'left';
+
+  msgEl.textContent = msg.text;
+
+  chatRoomEl.appendChild(msgEl);
+  chatRoomEl.scrollTop = chatRoomEl.scrollHeight; // scroll ke bawah
+}
+
+function getChatId(uid1, uid2) {
+  return uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1;
 }
