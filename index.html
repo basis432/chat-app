@@ -1,34 +1,57 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BBM Style Chat App</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BBM Style Chat App</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="auth">
-    <h2>Masuk / Daftar</h2>
-    <input type="email" id="email" placeholder="Email" /><br />
-    <input type="password" id="password" placeholder="Password" /><br />
-    <button onclick="login()">Masuk</button>
-    <button onclick="register()">Daftar</button>
-  </div>
-  <div id="app" style="display:none;">
-    <h2>Selamat datang, <span id="userEmail"></span></h2>
+
+<!-- Bagian Login/Daftar -->
+<div id="auth">
+  <h2>Masuk / Daftar</h2>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button id="btnRegister">Daftar</button>
+  <button id="btnLogin">Masuk</button>
+</div>
+
+<!-- Bagian Aplikasi -->
+<div id="app" style="display:none;">
+  <div>
+    <h3>Selamat datang, <span id="userEmail"></span></h3>
     <p>PIN kamu: <b id="userPIN"></b></p>
-    <input type="text" id="friendPIN" placeholder="PIN Teman" />
-    <button onclick="addFriend()">Tambah Teman</button>
-    <h3>Daftar Teman</h3>
-    <ul id="friendList"></ul>
-    <h3>Kirim Pesan</h3>
-    <input type="text" id="toPIN" placeholder="PIN Tujuan" />
-    <input type="text" id="message" placeholder="Pesan" />
-    <button onclick="sendMessage()">Kirim</button>
-    <ul id="messages"></ul>
+    <button id="btnLogout">Logout</button>
   </div>
-  <script type="module" src="firebase-config.js"></script>
-  <script type="module" src="app.js"></script>
+
+  <!-- Tambah Teman -->
+  <div>
+    <h4>Tambah Teman dengan PIN</h4>
+    <input type="text" id="inputFriendPIN" placeholder="Masukkan PIN Teman" />
+    <button id="btnAddFriend">Tambah Teman</button>
+    <h4>Permintaan Pertemanan</h4>
+    <ul id="friendRequestsList"></ul>
+  </div>
+
+  <!-- Daftar Teman -->
+  <div>
+    <h4>Daftar Teman</h4>
+    <ul id="friendList"></ul>
+  </div>
+
+  <!-- Chat Box -->
+  <div>
+    <h4>Chat dengan: <span id="chatWith"></span></h4>
+    <div id="chatMessages" style="height:300px; overflow-y:auto; border:1px solid #ccc; padding:10px;"></div>
+    <input type="text" id="inputMessage" placeholder="Tulis pesan..." />
+    <input type="file" id="inputFile" />
+    <button id="btnSendMessage">Kirim</button>
+  </div>
+</div>
+
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="app.js"></script>
+
 </body>
 </html>
