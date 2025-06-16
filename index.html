@@ -1,53 +1,40 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BBM Clone</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BBM Clone - Login & Register</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>BBM Clone</h1>
-    <div id="login-container">
-      <input type="email" id="email" placeholder="Email" />
-      <input type="password" id="password" placeholder="Password" />
-      <button onclick="login()">Masuk</button>
-      <button onclick="register()">Daftar</button>
-    </div>
 
-    <div id="chat-container" style="display:none;">
-      <p>Selamat datang, <span id="user-email"></span></p>
-      <p><strong>PIN Anda:</strong> <span id="user-pin"></span></p>
-      <button onclick="logout()">Keluar</button>
+<div class="container">
 
-      <hr>
-      <h3>Tambah Teman via PIN</h3>
-      <input type="text" id="friend-pin" placeholder="Masukkan PIN Teman" />
-      <button onclick="sendFriendRequest()">Kirim Permintaan</button>
+  <h1>BBM Clone</h1>
 
-      <div id="requests-container"></div>
-
-      <hr>
-      <h3>Daftar Teman</h3>
-      <div id="friends-list"></div>
-
-      <hr>
-      <h3>Chat</h3>
-      <div id="chat-room" style="border:1px solid #555; padding:10px; height:300px; overflow-y:auto; background:#222; color:#eee;"></div>
-
-      <input type="text" id="chat-input" placeholder="Ketik pesan..." style="width:80%;" />
-      <button onclick="sendMessage()">Kirim</button>
-    </div>
+  <div id="auth-container">
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="btn-register">Daftar</button>
+    <button id="btn-login">Masuk</button>
+    <p id="message" class="message"></p>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <div id="user-container" style="display:none;">
+    <p>Halo, <span id="user-email"></span></p>
+    <p>PIN kamu: <span id="user-pin"></span></p>
+    <button id="btn-logout">Keluar</button>
+  </div>
 
-  <!-- Config dan Logika -->
-  <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
