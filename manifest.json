@@ -1,9 +1,8 @@
 {
-  "name": "Aplikasi Chat BBM Style",
-  "short_name": "CHATBBMYAHMAR",
+  "name": "BBM Yahmar Oiii",
+  "short_name": "BBMChat",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "description": "Chat menggunakan sistem PIN seperti BBM!",
-  "icons": []
+  "theme_color": "#00bcd4",
+  "background_color": "#111"
 }
