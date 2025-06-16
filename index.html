@@ -1,35 +1,37 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BBM Clone</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aplikasi Chat BBM Style</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="login">
-    <h2>Masuk BBM Clone</h2>
-    <input type="text" id="nameInput" placeholder="Masukkan Nama" />
+    <h2>Masuk</h2>
+    <input type="text" id="nameInput" placeholder="Masukkan nama kamu">
     <button id="masukBtn">Masuk</button>
   </div>
 
-  <div id="dashboard" style="display:none;">
-    <h2>Halo, <span id="displayName"></span></h2>
-    <p>PIN kamu: <strong id="userPIN"></strong></p>
+  <div id="dashboard" style="display: none;">
+    <h3>Halo, <span id="displayName"></span> | PIN: <span id="userPIN"></span></h3>
+    
+    <h4>Kirim Permintaan Teman</h4>
+    <input type="text" id="targetPIN" placeholder="PIN Teman">
+    <button onclick="kirimPermintaan()">Kirim</button>
 
-    <h3>Kirim Permintaan Chat</h3>
-    <input type="text" id="targetPIN" placeholder="Masukkan PIN tujuan" />
-    <button onclick="kirimPermintaan()">Kirim Permintaan</button>
-
-    <h3>Permintaan Masuk</h3>
+    <h4>Permintaan Masuk</h4>
     <ul id="daftarPermintaanMasuk"></ul>
 
-    <h3>Teman</h3>
+    <h4>Daftar Teman</h4>
     <ul id="daftarTeman"></ul>
   </div>
 
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
