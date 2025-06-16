@@ -1,389 +1,361 @@
-import { auth, db, storage } from "./firebase-config.js";
-
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  ref,
-  set,
-  get,
-  child,
-  push,
-  onValue,
-  update,
-  remove,
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-import {
-  ref as sRef,
-  uploadBytes,
-  getDownloadURL,
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
-
-// ELEMENTS
-const authDiv = document.getElementById("auth");
-const appDiv = document.getElementById("app");
-
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const btnRegister = document.getElementById("btnRegister");
-const btnLogin = document.getElementById("btnLogin");
-const btnLogout = document.getElementById("btnLogout");
-
-const userEmailSpan = document.getElementById("userEmail");
-const userPINSpan = document.getElementById("userPIN");
-
-const inputFriendPIN = document.getElementById("inputFriendPIN");
-const btnAddFriend = document.getElementById("btnAddFriend");
-const friendRequestsList = document.getElementById("friendRequestsList");
-const friendList = document.getElementById("friendList");
-
-const chatWithSpan = document.getElementById("chatWith");
-const chatMessagesDiv = document.getElementById("chatMessages");
-const inputMessage = document.getElementById("inputMessage");
-const inputFile = document.getElementById("inputFile");
-const btnSendMessage = document.getElementById("btnSendMessage");
-
 let currentUser = null;
 let currentUserData = null;
-let chatPartnerUID = null;
-let chatPartnerData = null;
+let currentChatFriend = null;
 
-// Buat PIN acak 6 karakter
-function generateRandomPIN(length = 6) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let pin = "";
-  for (let i = 0; i < length; i++) {
-    pin += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return pin;
-}
+const loginScreen = document.getElementById('login-screen');
+const pinScreen = document.getElementById('pin-screen');
+const friendRequestScreen = document.getElementById('friend-request-screen');
+const chatScreen = document.getElementById('chat-screen');
 
-// DAFTAR
-btnRegister.onclick = async () => {
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
+const loginMessage = document.getElementById('login-message');
+const pinMessage = document.getElementById('pin-message');
 
-  if (!email || !password) {
-    alert("Email dan password harus diisi");
-    return;
-  }
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
 
-    // Buat PIN unik
-    let pin = generateRandomPIN();
+const pinInput = document.getElementById('pin-input');
 
-    // Cek PIN sudah dipakai?
-    let pinUsed = await get(ref(db, "pins/" + pin));
-    while (pinUsed.exists()) {
-      pin = generateRandomPIN();
-      pinUsed = await get(ref(db, "pins/" + pin));
-    }
+const friendPinInput = document.getElementById('friend-pin-input');
+const friendRequestsList = document.getElementById('friend-requests-list');
+const friendsList = document.getElementById('friends-list');
 
-    // Simpan user
-    await set(ref(db, "users/" + user.uid), {
-      email: user.email,
-      pin: pin,
-    });
+const chatWithName = document.getElementById('chat-with-name');
+const chatMessages = document.getElementById('chat-messages');
+const chatMessageInput = document.getElementById('chat-message-input');
+const chatFileInput = document.getElementById('chat-file-input');
 
-    // Simpan index PIN ke UID
-    await set(ref(db, "pins/" + pin), user.uid);
+document.getElementById('btn-login').onclick = login;
+document.getElementById('btn-register').onclick = register;
+document.getElementById('btn-save-pin').onclick = savePin;
+document.getElementById('btn-send-friend-request').onclick = sendFriendRequest;
+document.getElementById('btn-logout').onclick = logout;
+document.getElementById('btn-send-message').onclick = sendMessage;
+document.getElementById('btn-send-file').onclick = () => chatFileInput.click();
+chatFileInput.onchange = sendFile;
 
-    alert("Pendaftaran berhasil! PIN kamu: " + pin);
-  } catch (error) {
-    alert("Gagal daftar: " + error.message);
-  }
-};
-
-// LOGIN
-btnLogin.onclick = async () => {
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
-
-  if (!email || !password) {
-    alert("Email dan password harus diisi");
-    return;
-  }
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    // Ambil data user
-    const snapshot = await get(ref(db, "users/" + user.uid));
-    if (!snapshot.exists()) {
-      alert("Data user tidak ditemukan");
-      return;
-    }
-    currentUserData = snapshot.val();
-
-    currentUser = user;
-
-    showApp(user, currentUserData.pin);
-    setupFriendListListener();
-    setupFriendRequestsListener();
-  } catch (error) {
-    alert("Gagal login: " + error.message);
-  }
-};
-
-// LOGOUT
-btnLogout.onclick = async () => {
-  await signOut(auth);
-  authDiv.style.display = "block";
-  appDiv.style.display = "none";
-  currentUser = null;
-  currentUserData = null;
-  chatPartnerUID = null;
-  chatPartnerData = null;
-  friendList.innerHTML = "";
-  friendRequestsList.innerHTML = "";
-  chatMessagesDiv.innerHTML = "";
-  chatWithSpan.textContent = "";
-};
-
-// TAMPILKAN APLIKASI
-function showApp(user, pin) {
-  authDiv.style.display = "none";
-  appDiv.style.display = "block";
-  userEmailSpan.textContent = user.email;
-  userPINSpan.textContent = pin;
-}
-
-// TAMBAH TEMAN via PIN
-btnAddFriend.onclick = async () => {
-  const friendPIN = inputFriendPIN.value.trim().toUpperCase();
-  if (!friendPIN) {
-    alert("Masukkan PIN teman");
-    return;
-  }
-  if (friendPIN === currentUserData.pin) {
-    alert("Tidak bisa menambahkan diri sendiri");
-    return;
-  }
-
-  try {
-    const friendUIDSnap = await get(ref(db, "pins/" + friendPIN));
-    if (!friendUIDSnap.exists()) {
-      alert("PIN teman tidak ditemukan");
-      return;
-    }
-    const friendUID = friendUIDSnap.val();
-
-    // Cek sudah teman atau ada permintaan?
-    const alreadyFriendSnap = await get(ref(db, `friends/${currentUser.uid}/${friendUID}`));
-    const alreadyRequestedSnap = await get(ref(db, `friendRequests/${friendUID}/${currentUser.uid}`));
-
-    if (alreadyFriendSnap.exists()) {
-      alert("Teman sudah ada di daftar kamu");
-      return;
-    }
-    if (alreadyRequestedSnap.exists()) {
-      alert("Permintaan sudah dikirim sebelumnya");
-      return;
-    }
-
-    // Kirim permintaan teman ke friendRequests/{targetUID}/{currentUID} = true
-    await set(ref(db, `friendRequests/${friendUID}/${currentUser.uid}`), true);
-    alert("Permintaan pertemanan terkirim");
-    inputFriendPIN.value = "";
-  } catch (error) {
-    alert("Gagal tambah teman: " + error.message);
-  }
-};
-
-// LISTENER untuk permintaan teman masuk
-function setupFriendRequestsListener() {
-  const requestsRef = ref(db, `friendRequests/${currentUser.uid}`);
-  onValue(requestsRef, (snapshot) => {
-    friendRequestsList.innerHTML = "";
-    if (!snapshot.exists()) return;
-
-    const requests = snapshot.val();
-    for (const requesterUID in requests) {
-      // Ambil data requester email dan pin
-      get(ref(db, `users/${requesterUID}`)).then((snap) => {
-        if (!snap.exists()) return;
-        const userData = snap.val();
-
-        const li = document.createElement("li");
-        li.textContent = `PIN: ${userData.pin} | Email: ${userData.email}`;
-
-        const btnAccept = document.createElement("button");
-        btnAccept.textContent = "Terima";
-        btnAccept.onclick = async () => {
-          // Tambah ke friends kedua arah
-          const updates = {};
-          updates[`friends/${currentUser.uid}/${requesterUID}`] = true;
-          updates[`friends/${requesterUID}/${currentUser.uid}`] = true;
-          await update(ref(db), updates);
-
-          // Hapus permintaan
-          await remove(ref(db, `friendRequests/${currentUser.uid}/${requesterUID}`));
-
-          alert("Permintaan diterima");
-        };
-
-        const btnReject = document.createElement("button");
-        btnReject.textContent = "Tolak";
-        btnReject.onclick = async () => {
-          await remove(ref(db, `friendRequests/${currentUser.uid}/${requesterUID}`));
-          alert("Permintaan ditolak");
-        };
-
-        li.appendChild(btnAccept);
-        li.appendChild(btnReject);
-        friendRequestsList.appendChild(li);
-      });
-    }
-  });
-}
-
-// LISTENER untuk daftar teman
-function setupFriendListListener() {
-  const friendsRef = ref(db, `friends/${currentUser.uid}`);
-  onValue(friendsRef, (snapshot) => {
-    friendList.innerHTML = "";
-    if (!snapshot.exists()) return;
-
-    const friends = snapshot.val();
-    for (const friendUID in friends) {
-      // Ambil data teman
-      get(ref(db, `users/${friendUID}`)).then((snap) => {
-        if (!snap.exists()) return;
-        const userData = snap.val();
-
-        const li = document.createElement("li");
-        li.textContent = `PIN: ${userData.pin} | Email: ${userData.email}`;
-        li.style.cursor = "pointer";
-
-        li.onclick = () => {
-          openChat(friendUID, userData);
-        };
-
-        friendList.appendChild(li);
-      });
-    }
-  });
-}
-
-// BUKA CHAT dengan UID tertentu
-function openChat(friendUID, friendData) {
-  chatPartnerUID = friendUID;
-  chatPartnerData = friendData;
-  chatWithSpan.textContent = `${friendData.email} (${friendData.pin})`;
-  chatMessagesDiv.innerHTML = "";
-  listenChatMessages(currentUser.uid, friendUID);
-}
-
-// LISTEN pesan chat realtime (dari dan ke)
-let chatListener = null;
-function listenChatMessages(uid1, uid2) {
-  if (chatListener) {
-    chatListener(); // Unsubscribe
-  }
-  // Buat ID chat konsisten: misal urut alfabet
-  const chatId = uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1;
-  const messagesRef = ref(db, "messages/" + chatId);
-
-  chatListener = onValue(messagesRef, (snapshot) => {
-    chatMessagesDiv.innerHTML = "";
-    if (!snapshot.exists()) return;
-
-    const messages = snapshot.val();
-    for (const msgId in messages) {
-      const msg = messages[msgId];
-      const div = document.createElement("div");
-      div.textContent = `${msg.from === currentUser.uid ? "Kamu" : chatPartnerData.email}: ${msg.text || ""}`;
-
-      if (msg.fileUrl) {
-        const link = document.createElement("a");
-        link.href = msg.fileUrl;
-        link.target = "_blank";
-        link.textContent = `[File: ${msg.fileName}]`;
-        div.appendChild(document.createElement("br"));
-        div.appendChild(link);
-      }
-
-      div.className = msg.from === currentUser.uid ? "message-sent" : "message-received";
-      chatMessagesDiv.appendChild(div);
-    }
-    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-  });
-}
-
-// KIRIM PESAN
-btnSendMessage.onclick = async () => {
-  if (!chatPartnerUID) {
-    alert("Pilih teman dulu untuk chat");
-    return;
-  }
-
-  const text = inputMessage.value.trim();
-  const file = inputFile.files[0];
-
-  if (!text && !file) {
-    alert("Tulis pesan atau pilih file untuk dikirim");
-    return;
-  }
-
-  // ID chat sama seperti di listenChatMessages
-  const chatId = currentUser.uid < chatPartnerUID ? currentUser.uid + "_" + chatPartnerUID : chatPartnerUID + "_" + currentUser.uid;
-  const messagesRef = ref(db, "messages/" + chatId);
-
-  let fileUrl = null;
-  let fileName = null;
-
-  if (file) {
-    // Batasi ukuran file max 5MB
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File terlalu besar, maksimal 5MB");
-      return;
-    }
-
-    const storageRef = sRef(storage, `chat_files/${chatId}/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    fileUrl = await getDownloadURL(storageRef);
-    fileName = file.name;
-  }
-
-  // Push pesan baru
-  await push(messagesRef, {
-    from: currentUser.uid,
-    to: chatPartnerUID,
-    text: text || null,
-    fileUrl,
-    fileName,
-    timestamp: Date.now(),
-  });
-
-  inputMessage.value = "";
-  inputFile.value = "";
-};
- 
-// AUTO LOGIN CHECK
-onAuthStateChanged(auth, async (user) => {
+auth.onAuthStateChanged(async user => {
   if (user) {
     currentUser = user;
-    const snapshot = await get(ref(db, "users/" + user.uid));
-    if (snapshot.exists()) {
-      currentUserData = snapshot.val();
-      showApp(user, currentUserData.pin);
-      setupFriendListListener();
-      setupFriendRequestsListener();
-    } else {
-      alert("Data user tidak ditemukan di database");
-      await signOut(auth);
-    }
+    await loadUserData();
   } else {
-    authDiv.style.display = "block";
-    appDiv.style.display = "none";
     currentUser = null;
     currentUserData = null;
+    showScreen('login');
   }
 });
+
+function showScreen(screenName) {
+  loginScreen.style.display = 'none';
+  pinScreen.style.display = 'none';
+  friendRequestScreen.style.display = 'none';
+  chatScreen.style.display = 'none';
+
+  if (screenName === 'login') loginScreen.style.display = 'block';
+  else if (screenName === 'pin') pinScreen.style.display = 'block';
+  else if (screenName === 'friendRequests') friendRequestScreen.style.display = 'block';
+  else if (screenName === 'chat') chatScreen.style.display = 'block';
+}
+
+async function login() {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+  loginMessage.textContent = '';
+
+  if (!email || !password) {
+    loginMessage.textContent = 'Email dan password harus diisi.';
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch (error) {
+    loginMessage.textContent = 'Login gagal: ' + error.message;
+  }
+}
+
+async function register() {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+  loginMessage.textContent = '';
+
+  if (!email || !password) {
+    loginMessage.textContent = 'Email dan password harus diisi.';
+    return;
+  }
+
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    currentUser = userCredential.user;
+
+    // Simpan data user dasar
+    await db.ref('users/' + currentUser.uid).set({
+      email: email,
+      pin: null,
+      friends: {},
+      friendRequests: {},
+      displayName: email.split('@')[0]
+    });
+
+  } catch (error) {
+    loginMessage.textContent = 'Registrasi gagal: ' + error.message;
+  }
+}
+
+async function loadUserData() {
+  if (!currentUser) return;
+  const userRef = db.ref('users/' + currentUser.uid);
+  const snapshot = await userRef.once('value');
+  currentUserData = snapshot.val();
+
+  if (!currentUserData) {
+    // Kalau data tidak ada, buat default data
+    await userRef.set({
+      email: currentUser.email,
+      pin: null,
+      friends: {},
+      friendRequests: {},
+      displayName: currentUser.email.split('@')[0]
+    });
+    currentUserData = {
+      email: currentUser.email,
+      pin: null,
+      friends: {},
+      friendRequests: {},
+      displayName: currentUser.email.split('@')[0]
+    };
+  }
+
+  if (!currentUserData.pin) {
+    showScreen('pin');
+  } else {
+    showScreen('friendRequests');
+    setupFriendRequestsListener();
+    setupFriendsListener();
+  }
+}
+
+async function savePin() {
+  const pin = pinInput.value.trim();
+  pinMessage.textContent = '';
+
+  if (!/^\d{4}$/.test(pin)) {
+    pinMessage.textContent = 'PIN harus 4 digit angka.';
+    return;
+  }
+
+  // Cek apakah PIN sudah dipakai user lain
+  const usersRef = db.ref('users');
+  const snapshot = await usersRef.orderByChild('pin').equalTo(pin).once('value');
+  if (snapshot.exists()) {
+    pinMessage.textContent = 'PIN sudah digunakan orang lain, pilih PIN lain.';
+    return;
+  }
+
+  // Simpan PIN ke profil user
+  await db.ref('users/' + currentUser.uid + '/pin').set(pin);
+  currentUserData.pin = pin;
+
+  showScreen('friendRequests');
+  setupFriendRequestsListener();
+  setupFriendsListener();
+}
+
+function setupFriendRequestsListener() {
+  const friendRequestsRef = db.ref('users/' + currentUser.uid + '/friendRequests');
+
+  friendRequestsRef.on('value', snapshot => {
+    friendRequestsList.innerHTML = '';
+    const requests = snapshot.val() || {};
+
+    Object.entries(requests).forEach(([requesterUid, status]) => {
+      if (status === 'pending') {
+        // Tampilkan permintaan
+        db.ref('users/' + requesterUid).once('value').then(snap => {
+          const user = snap.val();
+          if (!user) return;
+          const li = document.createElement('li');
+          li.textContent = user.displayName + ' (' + user.pin + ')';
+
+          // Tombol terima
+          const btnAccept = document.createElement('button');
+          btnAccept.textContent = 'Terima';
+          btnAccept.onclick = () => acceptFriendRequest(requesterUid);
+
+          // Tombol tolak
+          const btnReject = document.createElement('button');
+          btnReject.textContent = 'Tolak';
+          btnReject.onclick = () => rejectFriendRequest(requesterUid);
+
+          li.appendChild(btnAccept);
+          li.appendChild(btnReject);
+
+          friendRequestsList.appendChild(li);
+        });
+      }
+    });
+  });
+}
+
+async function acceptFriendRequest(requesterUid) {
+  // Update status permintaan jadi accepted
+  await db.ref('users/' + currentUser.uid + '/friendRequests/' + requesterUid).set('accepted');
+
+  // Tambah teman di kedua user
+  await db.ref('users/' + currentUser.uid + '/friends/' + requesterUid).set(true);
+  await db.ref('users/' + requesterUid + '/friends/' + currentUser.uid).set(true);
+
+  // Hapus permintaan
+  await db.ref('users/' + currentUser.uid + '/friendRequests/' + requesterUid).remove();
+}
+
+async function rejectFriendRequest(requesterUid) {
+  await db.ref('users/' + currentUser.uid + '/friendRequests/' + requesterUid).remove();
+}
+
+function setupFriendsListener() {
+  const friendsRef = db.ref('users/' + currentUser.uid + '/friends');
+  friendsRef.on('value', snapshot => {
+    friendsList.innerHTML = '';
+    const friends = snapshot.val() || {};
+
+    Object.keys(friends).forEach(async friendUid => {
+      const friendSnap = await db.ref('users/' + friendUid).once('value');
+      const friend = friendSnap.val();
+      if (!friend) return;
+
+      const li = document.createElement('li');
+      li.textContent = friend.displayName + ' (' + friend.pin + ')';
+      li.onclick = () => openChat(friendUid, friend.displayName);
+      friendsList.appendChild(li);
+    });
+  });
+}
+
+function openChat(friendUid, friendName) {
+  currentChatFriend = friendUid;
+  chatWithName.textContent = friendName;
+  showScreen('chat');
+  loadChatMessages();
+}
+
+function loadChatMessages() {
+  chatMessages.innerHTML = '';
+  if (!currentUser || !currentChatFriend) return;
+
+  const chatId = getChatId(currentUser.uid, currentChatFriend);
+  const messagesRef = db.ref('messages/' + chatId);
+  messagesRef.off(); // Bersihkan listener lama
+
+  messagesRef.on('child_added', snapshot => {
+    const message = snapshot.val();
+    displayMessage(message);
+  });
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function getChatId(uid1, uid2) {
+  return uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1;
+}
+
+function displayMessage(message) {
+  const div = document.createElement('div');
+  div.classList.add('message');
+  div.classList.add(message.sender === currentUser.uid ? 'self' : 'friend');
+
+  if (message.type === 'text') {
+    div.textContent = message.text;
+  } else if (message.type === 'file') {
+    const a = document.createElement('a');
+    a.href = message.fileUrl;
+    a.target = '_blank';
+    a.textContent = message.fileName || 'File';
+    div.appendChild(a);
+  }
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = chatMessageInput.value.trim();
+  if (!text || !currentUser || !currentChatFriend) return;
+
+  const chatId = getChatId(currentUser.uid, currentChatFriend);
+  const messageData = {
+    sender: currentUser.uid,
+    type: 'text',
+    text,
+    timestamp: Date.now()
+  };
+  await db.ref('messages/' + chatId).push(messageData);
+  chatMessageInput.value = '';
+}
+
+function sendFile() {
+  const file = chatFileInput.files[0];
+  if (!file || !currentUser || !currentChatFriend) return;
+
+  const chatId = getChatId(currentUser.uid, currentChatFriend);
+  const storageRef = storage.ref().child('chat_files/' + chatId + '/' + Date.now() + '_' + file.name);
+
+  const uploadTask = storageRef.put(file);
+  uploadTask.on('state_changed',
+    null,
+    error => alert('Upload gagal: ' + error.message),
+    async () => {
+      const fileUrl = await uploadTask.snapshot.ref.getDownloadURL();
+      const messageData = {
+        sender: currentUser.uid,
+        type: 'file',
+        fileUrl,
+        fileName: file.name,
+        timestamp: Date.now()
+      };
+      await db.ref('messages/' + chatId).push(messageData);
+      chatFileInput.value = '';
+    });
+}
+
+async function sendFriendRequest() {
+  const pin = friendPinInput.value.trim();
+  if (!/^\d{4}$/.test(pin)) {
+    alert('PIN teman harus 4 digit angka.');
+    return;
+  }
+
+  if (pin === currentUserData.pin) {
+    alert('Tidak bisa menambahkan diri sendiri.');
+    return;
+  }
+
+  // Cari user dengan PIN tersebut
+  const usersRef = db.ref('users');
+  const snapshot = await usersRef.orderByChild('pin').equalTo(pin).once('value');
+
+  if (!snapshot.exists()) {
+    alert('PIN tidak ditemukan.');
+    return;
+  }
+
+  const foundUsers = snapshot.val();
+  const friendUid = Object.keys(foundUsers)[0];
+
+  // Cek jika sudah teman
+  if (currentUserData.friends && currentUserData.friends[friendUid]) {
+    alert('Sudah menjadi teman.');
+    return;
+  }
+
+  // Kirim permintaan ke user tersebut
+  await db.ref('users/' + friendUid + '/friendRequests/' + currentUser.uid).set('pending');
+  alert('Permintaan teman terkirim.');
+  friendPinInput.value = '';
+}
+
+function logout() {
+  auth.signOut();
+  currentUser = null;
+  currentUserData = null;
+  currentChatFriend = null;
+  showScreen('login');
+}
