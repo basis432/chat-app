@@ -1,6 +1,6 @@
 // app.js
 
-// Referensi elemen
+// Referensi elemen DOM
 const loginSection = document.getElementById("loginSection");
 const chatSection = document.getElementById("chatSection");
 const loginBtn = document.getElementById("loginBtn");
@@ -8,10 +8,13 @@ const logoutBtn = document.getElementById("logoutBtn");
 const namaInput = document.getElementById("namaInput");
 const userName = document.getElementById("userName");
 const userPIN = document.getElementById("userPIN");
+
 const permintaanList = document.getElementById("permintaanList");
 const pinInput = document.getElementById("pinInput");
 const btnKirimPermintaan = document.getElementById("btnKirimPermintaan");
+
 const friendsList = document.getElementById("friendsList");
+
 const chatAreaSection = document.getElementById("chatAreaSection");
 const chatArea = document.getElementById("chatArea");
 const messageInput = document.getElementById("messageInput");
@@ -20,34 +23,46 @@ const backToFriendsBtn = document.getElementById("backToFriendsBtn");
 const chatPartnerName = document.getElementById("chatPartnerName");
 const chatPartnerPIN = document.getElementById("chatPartnerPIN");
 
-let currentUser = null; // {nama, pin}
-let currentChatPartner = null; // {nama, pin}
+let currentUser = null;
+let currentChatPartner = null;
 let messagesListener = null;
 
-// Fungsi buat PIN 6 digit
+/**
+ * Generate PIN 6 digit unik
+ */
 function generatePIN() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Simpan user baru di Firebase
-function saveUser(user) {
-  return db.ref(`users/${user.pin}`).set({
+/**
+ * Simpan user baru ke Firebase
+ */
+async function saveUser(user) {
+  await db.ref(`users/${user.pin}`).set({
     nama: user.nama,
     online: true
   });
 }
 
-// Set online status
-function setOnlineStatus(pin, status) {
-  return db.ref(`users/${pin}/online`).set(status);
+/**
+ * Update status online user
+ */
+async function setOnlineStatus(pin, status) {
+  await db.ref(`users/${pin}/online`).set(status);
 }
 
-// Login function
+/**
+ * Login user
+ */
 async function login() {
   const nama = namaInput.value.trim();
-  if (!nama) return alert("Isi nama kamu!");
+  if (!nama) {
+    alert("Mohon isi nama kamu.");
+    return;
+  }
 
   if (localStorage.getItem("pin") && localStorage.getItem("nama")) {
+    // Login otomatis dari localStorage
     currentUser = {
       pin: localStorage.getItem("pin"),
       nama: localStorage.getItem("nama"),
@@ -55,7 +70,16 @@ async function login() {
     await setOnlineStatus(currentUser.pin, true);
     afterLogin();
   } else {
+    // Buat user baru
     const pin = generatePIN();
+
+    // Cek apakah PIN sudah dipakai (loop bila perlu)
+    let pinExists = await db.ref(`users/${pin}`).once("value");
+    while (pinExists.exists()) {
+      pin = generatePIN();
+      pinExists = await db.ref(`users/${pin}`).once("value");
+    }
+
     currentUser = { nama, pin };
     try {
       await saveUser(currentUser);
@@ -69,91 +93,114 @@ async function login() {
   }
 }
 
-// Setelah login
+/**
+ * Setelah login sukses
+ */
 function afterLogin() {
   userName.textContent = currentUser.nama;
   userPIN.textContent = currentUser.pin;
-  loginSection.style.display = "none";
-  chatSection.style.display = "block";
+  loginSection.classList.add("hidden");
+  chatSection.classList.remove("hidden");
+  chatAreaSection.classList.add("hidden");
   loadPermintaan();
   loadFriends();
-  hideChatArea();
 }
 
-// Logout
+/**
+ * Logout user
+ */
 async function logout() {
-  if (currentUser) {
-    await setOnlineStatus(currentUser.pin, false);
-  }
+  if (!currentUser) return;
+  await setOnlineStatus(currentUser.pin, false);
   localStorage.clear();
   location.reload();
 }
 
-// Kirim permintaan pertemanan
+/**
+ * Kirim permintaan pertemanan
+ */
 async function kirimPermintaan() {
   const pinTeman = pinInput.value.trim();
-  if (!pinTeman) return alert("Masukkan PIN teman!");
 
+  if (!pinTeman) {
+    alert("Masukkan PIN teman.");
+    return;
+  }
   if (pinTeman === currentUser.pin) {
-    return alert("Tidak bisa kirim permintaan ke diri sendiri.");
+    alert("Tidak bisa mengirim permintaan ke diri sendiri.");
+    return;
   }
 
-  // Cek apakah pin teman ada di database
+  // Cek apakah PIN teman ada
   const userSnap = await db.ref(`users/${pinTeman}`).once("value");
   if (!userSnap.exists()) {
-    return alert("PIN teman tidak ditemukan.");
+    alert("PIN teman tidak ditemukan.");
+    return;
   }
 
-  // Cek apakah sudah teman
+  // Cek sudah jadi teman
   const friendSnap = await db.ref(`users/${currentUser.pin}/friends/${pinTeman}`).once("value");
   if (friendSnap.exists()) {
-    return alert("Sudah menjadi teman.");
+    alert("Sudah menjadi teman.");
+    return;
   }
 
-  // Cek apakah sudah mengirim permintaan sebelumnya
+  // Cek sudah kirim permintaan
   const requestSentSnap = await db.ref(`requests/${pinTeman}/${currentUser.pin}`).once("value");
   if (requestSentSnap.exists()) {
-    return alert("Permintaan sudah dikirim sebelumnya.");
+    alert("Permintaan sudah dikirim sebelumnya.");
+    return;
   }
 
-  // Simpan permintaan di requests
   await db.ref(`requests/${pinTeman}/${currentUser.pin}`).set(true);
   alert("Permintaan pertemanan berhasil dikirim.");
   pinInput.value = "";
 }
 
-// Load daftar permintaan masuk
+/**
+ * Load permintaan pertemanan masuk dan render
+ */
 function loadPermintaan() {
-  db.ref(`requests/${currentUser.pin}`).on("value", (snapshot) => {
+  db.ref(`requests/${currentUser.pin}`).on("value", async (snapshot) => {
     permintaanList.innerHTML = "";
     const requests = snapshot.val();
-    if (requests) {
-      Object.keys(requests).forEach(async (pinPengirim) => {
-        const namaSnap = await db.ref(`users/${pinPengirim}/nama`).once("value");
-        const namaPengirim = namaSnap.val() || pinPengirim;
 
-        const div = document.createElement("div");
-        div.textContent = `${namaPengirim} (${pinPengirim})`;
+    if (!requests) {
+      permintaanList.innerHTML = "<em>Tidak ada permintaan.</em>";
+      return;
+    }
 
-        const terimaBtn = document.createElement("button");
-        terimaBtn.textContent = "Terima";
-        terimaBtn.onclick = () => terimaPermintaan(pinPengirim);
+    for (const pinPengirim of Object.keys(requests)) {
+      const namaSnap = await db.ref(`users/${pinPengirim}/nama`).once("value");
+      const namaPengirim = namaSnap.val() || pinPengirim;
 
-        const tolakBtn = document.createElement("button");
-        tolakBtn.textContent = "Tolak";
-        tolakBtn.onclick = () => tolakPermintaan(pinPengirim);
+      const div = document.createElement("div");
+      div.classList.add("request-item");
+      div.textContent = `${namaPengirim} (PIN: ${pinPengirim})`;
 
-        div.appendChild(terimaBtn);
-        div.appendChild(tolakBtn);
-        permintaanList.appendChild(div);
-      });
+      const btnTerima = document.createElement("button");
+      btnTerima.textContent = "Terima";
+      btnTerima.classList.add("btn-accept");
+      btnTerima.onclick = () => terimaPermintaan(pinPengirim);
+
+      const btnTolak = document.createElement("button");
+      btnTolak.textContent = "Tolak";
+      btnTolak.classList.add("btn-reject");
+      btnTolak.onclick = () => tolakPermintaan(pinPengirim);
+
+      div.appendChild(btnTerima);
+      div.appendChild(btnTolak);
+      permintaanList.appendChild(div);
     }
   });
 }
 
-// Terima permintaan
+/**
+ * Terima permintaan pertemanan
+ */
 async function terimaPermintaan(pinPengirim) {
   try {
+    // Update friends dan hapus request
     let updates = {};
     updates[`users/${currentUser.pin}/friends/${pinPengirim}`] = true;
     updates[`users/${pinPengirim}/friends/${currentUser.pin}`] = true;
@@ -167,7 +214,9 @@ async function terimaPermintaan(pinPengirim) {
   }
 }
 
-// Tolak permintaan
+/**
+ * Tolak permintaan
+ */
 async function tolakPermintaan(pinPengirim) {
   try {
     await db.ref(`requests/${currentUser.pin}/${pinPengirim}`).remove();
@@ -177,136 +226,54 @@ async function tolakPermintaan(pinPengirim) {
   }
 }
 
-// Load daftar teman
+/**
+ * Load daftar teman dan render
+ */
 function loadFriends() {
   db.ref(`users/${currentUser.pin}/friends`).on("value", async (snapshot) => {
     friendsList.innerHTML = "";
     const friends = snapshot.val();
-    if (friends) {
-      for (const pinTeman of Object.keys(friends)) {
-        const namaSnap = await db.ref(`users/${pinTeman}/nama`).once("value");
-        const namaTeman = namaSnap.val() || pinTeman;
 
-        const li = document.createElement("li");
-        li.textContent = `${namaTeman} (${pinTeman})`;
-        li.style.cursor = "pointer";
-        li.onclick = () => bukaChatTeman(pinTeman, namaTeman);
+    if (!friends) {
+      friendsList.innerHTML = "<li><em>Belum ada teman</em></li>";
+      return;
+    }
 
-        friendsList.appendChild(li);
-      }
-    } else {
-      friendsList.innerHTML = "<i>Belum ada teman</i>";
+    for (const pinTeman of Object.keys(friends)) {
+      const namaSnap = await db.ref(`users/${pinTeman}/nama`).once("value");
+      const namaTeman = namaSnap.val() || pinTeman;
+
+      const li = document.createElement("li");
+      li.textContent = `${namaTeman} (PIN: ${pinTeman})`;
+      li.style.cursor = "pointer";
+      li.onclick = () => bukaChatTeman(pinTeman, namaTeman);
+
+      friendsList.appendChild(li);
     }
   });
 }
 
-// Buka chat dengan teman
+/**
+ * Buka chat dengan teman tertentu
+ */
 function bukaChatTeman(pinTeman, namaTeman) {
   currentChatPartner = { pin: pinTeman, nama: namaTeman };
   chatPartnerName.textContent = namaTeman;
   chatPartnerPIN.textContent = pinTeman;
 
-  loginSection.style.display = "none";
-  chatSection.style.display = "block";
-  chatAreaSection.style.display = "block";
+  chatAreaSection.classList.remove("hidden");
+  chatSection.querySelector("#permintaanSection").classList.add("hidden");
+  chatSection.querySelector("#cariTemanSection").classList.add("hidden");
+  chatSection.querySelector("#friendsSection").classList.add("hidden");
 
   loadChatMessages(pinTeman);
 }
 
-// Sembunyikan area chat
-function hideChatArea() {
-  chatAreaSection.style.display = "none";
+/**
+ * Sembunyikan area chat dan tampilkan daftar teman & lainnya
+ */
+function sembunyikanChatArea() {
   currentChatPartner = null;
-  chatArea.innerHTML = "";
-}
-
-// Load pesan chat antara dua user
-function loadChatMessages(pinTeman) {
-  if (messagesListener) {
-    db.ref("messages").off("value", messagesListener);
-  }
-
-  // Ambil pesan dari node messages dengan key yang berisi pin user dan pin teman (unik)
-  // Kita buat key room: urutkan pin supaya konsisten
-  const roomKey = currentUser.pin < pinTeman
-    ? `${currentUser.pin}_${pinTeman}`
-    : `${pinTeman}_${currentUser.pin}`;
-
-  messagesListener = db.ref(`messages/${roomKey}`).on("value", (snapshot) => {
-    chatArea.innerHTML = "";
-    const messages = snapshot.val();
-    if (messages) {
-      Object.values(messages).forEach((msg) => {
-        const div = document.createElement("div");
-        div.classList.add("message");
-        div.classList.add(msg.pin === currentUser.pin ? "you" : "other");
-        div.textContent = `${msg.nama}: ${msg.text}`;
-        chatArea.appendChild(div);
-      });
-      chatArea.scrollTop = chatArea.scrollHeight;
-    }
-  });
-}
-
-// Kirim pesan
-async function kirimPesan() {
-  const text = messageInput.value.trim();
-  if (!text) return;
-
-  if (!currentChatPartner) {
-    alert("Pilih teman dulu untuk mulai chat.");
-    return;
-  }
-
-  // Cek apakah teman benar-benar teman
-  const friendSnap = await db.ref(`users/${currentUser.pin}/friends/${currentChatPartner.pin}`).once("value");
-  if (!friendSnap.exists()) {
-    return alert("Kamu belum berteman dengan user ini.");
-  }
-
-  const roomKey = currentUser.pin < currentChatPartner.pin
-    ? `${currentUser.pin}_${currentChatPartner.pin}`
-    : `${currentChatPartner.pin}_${currentUser.pin}`;
-
-  const newMsgRef = db.ref(`messages/${roomKey}`).push();
-  await newMsgRef.set({
-    pin: currentUser.pin,
-    nama: currentUser.nama,
-    text,
-    timestamp: Date.now(),
-  });
-
-  messageInput.value = "";
-}
-
-// Event listeners
-loginBtn.addEventListener("click", login);
-logoutBtn.addEventListener("click", logout);
-btnKirimPermintaan.addEventListener("click", kirimPermintaan);
-sendBtn.addEventListener("click", kirimPesan);
-backToFriendsBtn.addEventListener("click", () => {
-  hideChatArea();
-});
-
-// Enter key support
-namaInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") login();
-});
-messageInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") kirimPesan();
-});
-pinInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") kirimPermintaan();
-});
-
-// Auto login jika data ada di localStorage
-window.onload = async () => {
-  if (localStorage.getItem("pin") && localStorage.getItem("nama")) {
-    currentUser = {
-      pin: localStorage.getItem("pin"),
-      nama: localStorage.getItem("nama"),
-    };
-    await setOnlineStatus(currentUser.pin, true);
-    afterLogin();
-  }
-};
+  chatAreaSection.classList.add("hidden");
+  chatSection.querySelector("#permintaanSection").classList.remove("hidden");
+  chatSection.querySelector("#cariTemanSection").classList.remove("hidden
