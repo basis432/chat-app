@@ -1,203 +1,138 @@
-let nama = "";
-let pin = "";
-let chatWithPIN = "";
-let chatWithName = "";
+// app.js
 
-// Generate PIN unik 6 digit
+// Referensi Firebase sudah dari firebase-config.js
+const loginSection = document.getElementById("loginSection");
+const chatSection = document.getElementById("chatSection");
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const namaInput = document.getElementById("namaInput");
+const userName = document.getElementById("userName");
+const userPIN = document.getElementById("userPIN");
+const chatArea = document.getElementById("chatArea");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+
+let currentUser = null; // object {nama, pin}
+
 function generatePIN() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-function login() {
-  const inputNama = document.getElementById("namaInput").value.trim();
-  if (!inputNama) {
-    alert("Isi namamu dulu!");
-    return;
-  }
-
-  // Cek apakah sudah ada data user di localStorage
-  if (!localStorage.getItem("pin") || !localStorage.getItem("nama")) {
-    // Generate PIN baru
-    pin = generatePIN();
-    nama = inputNama;
-
-    // Simpan di localStorage
-    localStorage.setItem("pin", pin);
-    localStorage.setItem("nama", nama);
-
-    // Simpan data user ke Firebase (jika belum ada)
-    db.ref("users/" + pin).set({
-      nama: nama,
-      online: true,
-      friends: {},
-      requests: {},
-    });
-  } else {
-    pin = localStorage.getItem("pin");
-    nama = localStorage.getItem("nama");
-
-    // Update status online setiap login
-    db.ref("users/" + pin + "/online").set(true);
-  }
-
-  // Update UI
-  document.getElementById("userName").textContent = nama;
-  document.getElementById("userPIN").textContent = pin;
-
-  document.getElementById("loginSection").style.display = "none";
-  document.getElementById("chatSection").style.display = "block";
-
-  listenPermintaan();
-  loadTeman();
+// Simpan user baru ke Firebase
+function saveUserToDB(user) {
+  return db.ref("users/" + user.pin).set({
+    nama: user.nama,
+    online: true,
+  });
 }
 
-// Kirim permintaan pertemanan
-function kirimPermintaan() {
-  const targetPIN = document.getElementById("pinInput").value.trim();
-  if (!targetPIN) {
-    alert("Isi PIN teman dulu!");
-    return;
-  }
-  if (targetPIN === pin) {
-    alert("Tidak bisa mengirim permintaan ke diri sendiri!");
-    return;
-  }
-
-  // Cek apakah PIN teman ada di database
-  db.ref("users/" + targetPIN)
-    .once("value")
-    .then((snapshot) => {
-      if (snapshot.exists()) {
-        // Kirim permintaan ke teman
-        db.ref("users/" + targetPIN + "/requests/" + pin).set(nama);
-        alert("Permintaan terkirim!");
-        document.getElementById("pinInput").value = "";
-      } else {
-        alert("PIN teman tidak ditemukan!");
-      }
-    });
+function setOnlineStatus(pin, status) {
+  return db.ref("users/" + pin + "/online").set(status);
 }
 
-// Dengarkan permintaan pertemanan masuk
-function listenPermintaan() {
-  db.ref("users/" + pin + "/requests").on("value", (snapshot) => {
-    const data = snapshot.val() || {};
-    const list = document.getElementById("permintaanList");
-    list.innerHTML = "";
-
-    for (const requesterPIN in data) {
-      const requesterName = data[requesterPIN];
-      const li = document.createElement("li");
-      li.textContent = `${requesterName} (PIN: ${requesterPIN}) `;
-
-      const btnTerima = document.createElement("button");
-      btnTerima.textContent = "Terima";
-      btnTerima.onclick = () => terimaTeman(requesterPIN, requesterName);
-
-      li.appendChild(btnTerima);
-      list.appendChild(li);
+function loadMessages() {
+  db.ref("messages").on("value", (snapshot) => {
+    chatArea.innerHTML = "";
+    const messages = snapshot.val();
+    if (messages) {
+      Object.values(messages).forEach((msg) => {
+        const div = document.createElement("div");
+        div.classList.add("message");
+        div.classList.add(msg.pin === currentUser.pin ? "you" : "other");
+        div.textContent = `${msg.nama}: ${msg.text}`;
+        chatArea.appendChild(div);
+      });
+      chatArea.scrollTop = chatArea.scrollHeight;
     }
   });
 }
 
-// Terima permintaan pertemanan
-function terimaTeman(friendPIN, friendName) {
-  // Tambahkan ke friends kedua pengguna
-  db.ref("users/" + pin + "/friends/" + friendPIN).set(friendName);
-  db.ref("users/" + friendPIN + "/friends/" + pin).set(nama);
-
-  // Hapus permintaan yang sudah diterima
-  db.ref("users/" + pin + "/requests/" + friendPIN).remove();
-}
-
-// Muat daftar teman
-function loadTeman() {
-  db.ref("users/" + pin + "/friends").on("value", (snapshot) => {
-    const data = snapshot.val() || {};
-    const list = document.getElementById("temanList");
-    list.innerHTML = "";
-
-    for (const friendPIN in data) {
-      const friendName = data[friendPIN];
-      const li = document.createElement("li");
-      const btnChat = document.createElement("button");
-      btnChat.textContent = `Chat dengan ${friendName} (PIN: ${friendPIN})`;
-      btnChat.onclick = () => bukaChat(friendPIN, friendName);
-
-      li.appendChild(btnChat);
-      list.appendChild(li);
-    }
-  });
-}
-
-// Buka jendela chat dengan teman
-function bukaChat(friendPIN, friendName) {
-  chatWithPIN = friendPIN;
-  chatWithName = friendName;
-
-  document.getElementById("chatWithName").textContent = friendName;
-  document.getElementById("chatWithPIN").textContent = friendPIN;
-  document.getElementById("chatBox").style.display = "block";
-
-  // Tampilkan chat messages
-  const chatID = [pin, friendPIN].sort().join("_");
-  db.ref("chats/" + chatID).on("value", (snapshot) => {
-    const data = snapshot.val() || {};
-    const box = document.getElementById("chatMessages");
-    box.innerHTML = "";
-
-    for (const key in data) {
-      const msg = data[key];
-      const msgDiv = document.createElement("div");
-      msgDiv.textContent = `${msg.from === pin ? "Kamu" : chatWithName}: ${msg.text}`;
-      box.appendChild(msgDiv);
-    }
-    box.scrollTop = box.scrollHeight;
-  });
-}
-
-// Kirim pesan chat
-function kirimPesan() {
-  const pesanInput = document.getElementById("chatInput");
-  const text = pesanInput.value.trim();
+function sendMessage() {
+  const text = messageInput.value.trim();
   if (!text) return;
 
-  const chatID = [pin, chatWithPIN].sort().join("_");
-  db.ref("chats/" + chatID).push({
-    from: pin,
-    text: text,
-    time: Date.now(),
+  const newMsgRef = db.ref("messages").push();
+  newMsgRef.set({
+    pin: currentUser.pin,
+    nama: currentUser.nama,
+    text,
+    timestamp: Date.now(),
   });
 
-  pesanInput.value = "";
+  messageInput.value = "";
 }
 
-// Tutup chat
-function tutupChat() {
-  document.getElementById("chatBox").style.display = "none";
-  chatWithPIN = "";
-  chatWithName = "";
+function login() {
+  const nama = namaInput.value.trim();
+  if (!nama) {
+    alert("Tolong isi nama kamu.");
+    return;
+  }
+
+  // Cek localStorage user
+  if (localStorage.getItem("pin") && localStorage.getItem("nama")) {
+    currentUser = {
+      pin: localStorage.getItem("pin"),
+      nama: localStorage.getItem("nama"),
+    };
+    afterLogin();
+  } else {
+    const pin = generatePIN();
+    currentUser = { nama, pin };
+
+    saveUserToDB(currentUser)
+      .then(() => {
+        // Simpan ke localStorage
+        localStorage.setItem("pin", pin);
+        localStorage.setItem("nama", nama);
+        afterLogin();
+      })
+      .catch((err) => {
+        alert("Gagal menyimpan user: " + err.message);
+      });
+  }
 }
 
-// Saat halaman dimuat, cek data login tersimpan
+function afterLogin() {
+  userName.textContent = currentUser.nama;
+  userPIN.textContent = currentUser.pin;
+  loginSection.style.display = "none";
+  chatSection.style.display = "block";
+
+  setOnlineStatus(currentUser.pin, true);
+  loadMessages();
+}
+
+function logout() {
+  if (currentUser) {
+    setOnlineStatus(currentUser.pin, false);
+  }
+  localStorage.clear();
+  location.reload();
+}
+
+// Event listeners
+loginBtn.addEventListener("click", login);
+logoutBtn.addEventListener("click", logout);
+sendBtn.addEventListener("click", sendMessage);
+
+// Enter key untuk login
+namaInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") login();
+});
+
+// Enter key untuk kirim pesan
+messageInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
+
+// Auto login jika data di localStorage ada
 window.onload = () => {
-  const savedPin = localStorage.getItem("pin");
-  const savedNama = localStorage.getItem("nama");
-
-  if (savedPin && savedNama) {
-    pin = savedPin;
-    nama = savedNama;
-
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("chatSection").style.display = "block";
-
-    document.getElementById("userName").textContent = nama;
-    document.getElementById("userPIN").textContent = pin;
-
-    // Set status online
-    db.ref("users/" + pin + "/online").set(true);
-
-    listenPermintaan();
-    loadTeman();
+  if (localStorage.getItem("pin") && localStorage.getItem("nama")) {
+    currentUser = {
+      pin: localStorage.getItem("pin"),
+      nama: localStorage.getItem("nama"),
+    };
+    afterLogin();
   }
 };
