@@ -3,187 +3,52 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chat BBM Style</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background: #121212;
-      color: #eee;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    header {
-      background: #1c1c1c;
-      padding: 1em;
-      text-align: center;
-      font-weight: bold;
-      font-size: 1.2em;
-    }
-    main {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-    }
-    #sidebar {
-      width: 280px;
-      background: #222;
-      display: flex;
-      flex-direction: column;
-      padding: 1em;
-      overflow-y: auto;
-      box-sizing: border-box;
-    }
-    #content {
-      flex: 1;
-      background: #181818;
-      display: flex;
-      flex-direction: column;
-    }
-    input, button, textarea {
-      font-size: 1em;
-      padding: 0.5em;
-      margin: 0.2em 0;
-      border-radius: 4px;
-      border: none;
-    }
-    button {
-      background: #3a6ee8;
-      color: white;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-    #login-register, #friends-list, #chat-container {
-      display: none;
-      flex-direction: column;
-    }
-    .visible {
-      display: flex !important;
-    }
-    #friends-list {
-      flex: 1;
-      overflow-y: auto;
-    }
-    .friend-item {
-      padding: 0.5em;
-      background: #333;
-      margin: 0.3em 0;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .friend-item.active {
-      background: #3a6ee8;
-    }
-    #chat-header {
-      padding: 0.5em 1em;
-      background: #2c2c2c;
-      font-weight: bold;
-      font-size: 1.1em;
-      border-bottom: 1px solid #444;
-    }
-    #messages {
-      flex: 1;
-      padding: 1em;
-      overflow-y: auto;
-      background: #222;
-    }
-    .message {
-      margin-bottom: 1em;
-      max-width: 70%;
-      word-wrap: break-word;
-      padding: 0.5em;
-      border-radius: 6px;
-    }
-    .message.sent {
-      background: #3a6ee8;
-      color: white;
-      align-self: flex-end;
-    }
-    .message.received {
-      background: #444;
-      color: #eee;
-      align-self: flex-start;
-    }
-    #message-input {
-      display: flex;
-      padding: 0.5em;
-      background: #2c2c2c;
-    }
-    #message-text {
-      flex: 1;
-      margin-right: 0.5em;
-      resize: none;
-      border-radius: 4px;
-    }
-    #file-input {
-      display: none;
-    }
-    #chat-actions {
-      display: flex;
-      gap: 0.5em;
-    }
-    #logout {
-      margin-top: 1em;
-      background: #e04a4a;
-    }
-    #add-friend, #create-group {
-      margin: 0.5em 0;
-      background: #28a745;
-    }
-    #friend-pin-input, #group-name-input {
-      width: 100%;
-    }
-  </style>
+  <title>Chat BBM-like Gratis</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+  <script src="firebase-config.js"></script>
 </head>
 <body>
-  <header>Chat BBM Style</header>
-  <main>
-    <aside id="sidebar">
-      <!-- Login & Register -->
-      <div id="login-register" class="visible">
-        <h3>Daftar / Login</h3>
-        <input id="email" type="email" placeholder="Email" autocomplete="username" />
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-        <button id="btn-register">Daftar</button>
-        <button id="btn-login">Login</button>
-      </div>
+  <div id="login-screen" class="screen">
+    <h2>Masuk atau Daftar</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="btn-login">Masuk</button>
+    <button id="btn-register">Daftar</button>
+    <div id="login-message"></div>
+  </div>
 
-      <!-- Friends List -->
-      <div id="friends-section">
-        <h3>Teman</h3>
-        <div id="friends-list"></div>
-        <input id="friend-pin-input" placeholder="Masukkan PIN teman" />
-        <button id="add-friend">Tambah Teman</button>
+  <div id="pin-screen" class="screen" style="display:none;">
+    <h2>Set PIN Unik Kamu (4 digit)</h2>
+    <input type="text" id="pin-input" maxlength="4" />
+    <button id="btn-save-pin">Simpan PIN</button>
+    <div id="pin-message"></div>
+  </div>
 
-        <h3>Grup</h3>
-        <div id="groups-list"></div>
-        <input id="group-name-input" placeholder="Nama Grup Baru" />
-        <button id="create-group">Buat Grup</button>
+  <div id="friend-request-screen" class="screen" style="display:none;">
+    <h2>Tambah Teman dengan PIN</h2>
+    <input type="text" id="friend-pin-input" maxlength="4" placeholder="Masukkan PIN teman" />
+    <button id="btn-send-friend-request">Kirim Permintaan</button>
+    <h3>Permintaan Teman Masuk</h3>
+    <ul id="friend-requests-list"></ul>
+    <h3>Daftar Teman</h3>
+    <ul id="friends-list"></ul>
+  </div>
 
-        <button id="logout">Logout</button>
-      </div>
-    </aside>
+  <div id="chat-screen" class="screen" style="display:none;">
+    <h2>Chat dengan <span id="chat-with-name"></span></h2>
+    <div id="chat-messages"></div>
+    <input type="file" id="chat-file-input" style="display:none;" />
+    <input type="text" id="chat-message-input" placeholder="Tulis pesan..." />
+    <button id="btn-send-message">Kirim</button>
+    <button id="btn-send-file">Kirim File</button>
+    <button id="btn-logout">Keluar</button>
+  </div>
 
-    <section id="content">
-      <div id="chat-container">
-        <div id="chat-header">Pilih teman atau grup untuk mulai chat</div>
-        <div id="messages"></div>
-        <div id="message-input">
-          <textarea id="message-text" rows="2" placeholder="Tulis pesan..."></textarea>
-          <div id="chat-actions">
-            <button id="btn-send">Kirim</button>
-            <button id="btn-attach">Lampirkan</button>
-            <input type="file" id="file-input" />
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script type="module" src="./app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
