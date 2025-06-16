@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BBM Clone</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
   <div id="login">
     <h2>Masuk BBM Clone</h2>
-    <input type="text" id="nameInput" placeholder="Masukkan Nama">
-    <button onclick="registerUser()">Masuk</button>
+    <input type="text" id="nameInput" placeholder="Masukkan Nama" />
+    <button id="masukBtn">Masuk</button>
   </div>
 
   <div id="dashboard" style="display:none;">
@@ -20,7 +18,7 @@
     <p>PIN kamu: <strong id="userPIN"></strong></p>
 
     <h3>Kirim Permintaan Chat</h3>
-    <input type="text" id="targetPIN" placeholder="Masukkan PIN tujuan">
+    <input type="text" id="targetPIN" placeholder="Masukkan PIN tujuan" />
     <button onclick="kirimPermintaan()">Kirim Permintaan</button>
 
     <h3>Permintaan Masuk</h3>
@@ -34,6 +32,5 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
-
 </body>
 </html>
