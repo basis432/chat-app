@@ -3,59 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ChatApp BBM Style</title>
-  <link rel="manifest" href="manifest.json" />
+  <title>Chat BBM Style</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-  <div class="container">
-    <!-- Login Section -->
-    <div id="loginSection">
-      <h2>Masuk ke Aplikasi</h2>
-      <input
-        id="namaInput"
-        type="text"
-        placeholder="Nama Kamu"
-        onkeydown="if(event.key==='Enter') login()"
-      />
-      <button onclick="login()">Masuk</button>
-    </div>
-
-    <!-- Chat Section -->
-    <div id="chatSection" style="display:none;">
-      <h3>
-        Hai, <span id="userName"></span> (PIN: <span id="userPIN"></span>)
-      </h3>
-      <p>Status: <span style="color:green;">🟢 Online</span></p>
-
-      <h4>Permintaan Teman</h4>
-      <ul id="permintaanList"></ul>
-
-      <h4>Tambah Teman (PIN)</h4>
-      <input id="pinInput" type="text" placeholder="Masukkan PIN teman" />
-      <button onclick="kirimPermintaan()">Kirim Permintaan</button>
-
-      <h4>Daftar Teman</h4>
-      <ul id="temanList"></ul>
-
-      <div id="chatBox" style="display:none;">
-        <h4>Chat dengan <span id="chatWithName"></span> (PIN: <span id="chatWithPIN"></span>)</h4>
-        <div id="chatMessages"></div>
-        <input
-          id="chatInput"
-          type="text"
-          placeholder="Ketik pesan..."
-          onkeydown="if(event.key==='Enter') kirimPesan()"
-        />
-        <button onclick="kirimPesan()">Kirim</button>
-        <button onclick="tutupChat()">Tutup Chat</button>
-      </div>
-    </div>
+  <div id="loginSection">
+    <h2>Masuk Chat</h2>
+    <input id="namaInput" type="text" placeholder="Masukkan nama kamu" />
+    <button id="loginBtn">Masuk</button>
   </div>
 
-  <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
+  <div id="chatSection" style="display:none;">
+    <h3>Hai, <span id="userName"></span> (PIN: <span id="userPIN"></span>)</h3>
+    <button id="logoutBtn">Keluar</button>
+
+    <div id="chatArea" style="height:300px; overflow-y:auto; border:1px solid #ccc; margin-bottom:10px;"></div>
+
+    <input id="messageInput" type="text" placeholder="Ketik pesan..." />
+    <button id="sendBtn">Kirim</button>
+  </div>
 </body>
 </html>
