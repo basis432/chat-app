@@ -1,185 +1,204 @@
-/* style.css */
-
-/* Reset dan base */
+/* Reset dasar */
 * {
   box-sizing: border-box;
-}
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
-  background: #f2f7fa;
-  color: #333;
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-  min-height: 100vh;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-main {
-  width: 100%;
+
+/* Container umum */
+.container {
   max-width: 480px;
-}
-
-/* Utility */
-.hidden {
-  display: none !important;
-}
-.center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.card {
-  background: white;
+  margin: 20px auto;
+  padding: 10px;
   border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+  background-color: #f0f0f5;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
 }
 
-/* Form input */
-input[type=text] {
+/* Hidden */
+.hidden {
+  display: none;
+}
+
+h2, h3 {
+  margin-bottom: 10px;
+  color: #222;
+}
+
+input[type="text"] {
   width: 100%;
-  padding: 12px 10px;
-  margin: 10px 0 15px 0;
-  border: 1px solid #ccc;
+  padding: 10px 12px;
+  margin-bottom: 10px;
   border-radius: 6px;
+  border: 1px solid #ccc;
   font-size: 16px;
-  outline-color: #007bff;
 }
 
-/* Buttons */
 button {
+  background-color: #2979ff;
+  color: white;
+  border: none;
   padding: 10px 16px;
   border-radius: 6px;
-  border: none;
-  font-size: 16px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
 }
-.btn-primary {
-  background-color: #007bff;
-  color: white;
+
+button:hover:not(:disabled) {
+  background-color: #1565c0;
 }
-.btn-primary:hover {
-  background-color: #0056b3;
-}
-.btn-logout {
-  background-color: #dc3545;
-  color: white;
-  float: right;
-  margin-top: -40px;
-  padding: 6px 12px;
-  font-size: 14px;
-  border-radius: 6px;
-}
-.btn-logout:hover {
-  background-color: #a71d2a;
-}
-.btn-back {
-  background-color: transparent;
-  color: #007bff;
-  font-size: 16px;
-  border: none;
-  padding: 0;
-  margin-right: 10px;
-  cursor: pointer;
-}
-.btn-back:hover {
-  text-decoration: underline;
+
+button:disabled {
+  background-color: #a3c0ff;
+  cursor: default;
 }
 
 /* Header */
-header h2, header h3 {
-  margin: 0 0 15px 0;
-}
-
-/* Daftar teman */
-.friends-list {
-  list-style: none;
-  padding: 0;
-}
-.friends-list li {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.friends-list li:hover {
-  background-color: #f1f9ff;
-}
-
-/* Permintaan pertemanan */
-#permintaanList > div {
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: #e9f2ff;
-  border-radius: 6px;
+header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-#permintaanList button {
-  margin-left: 8px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-}
-#permintaanList button:first-child {
-  background-color: #28a745;
-  color: white;
-  border: none;
-}
-#permintaanList button:first-child:hover {
-  background-color: #1e7e34;
-}
-#permintaanList button:last-child {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-}
-#permintaanList button:last-child:hover {
-  background-color: #a71d2a;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ccc;
 }
 
-/* Chat area */
-.chat-area {
-  background: #fafafa;
-  border: 1px solid #ddd;
-  height: 320px;
+/* Daftar Teman */
+.friend-list {
+  list-style: none;
+  max-height: 200px;
   overflow-y: auto;
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
 }
 
-/* Pesan chat */
-.message {
-  margin-bottom: 10px;
-  max-width: 75%;
-  padding: 10px 15px;
-  border-radius: 20px;
-  font-size: 14px;
-  word-wrap: break-word;
+.friend-item {
+  padding: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s ease;
+  position: relative;
 }
-.message.you {
-  background-color: #007bff;
+
+.friend-item:last-child {
+  border-bottom: none;
+}
+
+.friend-item:hover {
+  background-color: #e3f2fd;
+}
+
+.friend-item.online::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: #4caf50;
+  border-radius: 50%;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Permintaan Pertemanan */
+.request-list {
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  margin-bottom: 10px;
+  padding: 5px;
+}
+
+.friend-request-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.friend-request-item:last-child {
+  border-bottom: none;
+}
+
+.friend-request-item button {
+  padding: 5px 8px;
+  font-size: 14px;
+  margin-left: 5px;
+}
+
+/* Chat window */
+#chat-window {
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  padding: 10px;
+}
+
+#friend-chat-title {
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #1565c0;
+}
+
+.chat-box {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+}
+
+.chat-message {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.chat-message.sent {
+  background-color: #2979ff;
   color: white;
   margin-left: auto;
-  border-bottom-right-radius: 0;
-}
-.message.other {
-  background-color: #e5e5ea;
-  color: #333;
-  margin-right: auto;
-  border-bottom-left-radius: 0;
+  text-align: right;
 }
 
-/* Footer chat */
-footer {
+.chat-message.received {
+  background-color: #ddd;
+  color: #222;
+  margin-right: auto;
+  text-align: left;
+}
+
+/* Input pesan */
+.chat-input-container {
   display: flex;
   gap: 10px;
 }
-footer input[type=text] {
-  flex: 1;
+
+.chat-input-container input[type="text"] {
+  flex-grow: 1;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-size: 16px;
+}
+
+/* Responsive for small devices */
+@media (max-width: 500px) {
+  .container {
+    margin: 10px;
+    width: auto;
+  }
 }
