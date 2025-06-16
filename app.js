@@ -1,279 +1,382 @@
-// app.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import {
+  getDatabase, ref, set, get, update, onValue, push, child, query, orderByChild, equalTo, remove
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import {
+  getAuth, signInAnonymously, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-// Referensi elemen DOM
-const loginSection = document.getElementById("loginSection");
-const chatSection = document.getElementById("chatSection");
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const namaInput = document.getElementById("namaInput");
-const userName = document.getElementById("userName");
-const userPIN = document.getElementById("userPIN");
+const firebaseConfig = {
+  apiKey: "AIzaSyBnkk02CHyiWG1ygWVV3g9O07jd5TFVNn0",
+  authDomain: "chatappgratis-d2649.firebaseapp.com",
+  databaseURL: "https://chatappgratis-d2649-default-rtdb.firebaseio.com",
+  projectId: "chatappgratis-d2649",
+  storageBucket: "chatappgratis-d2649.appspot.com",
+  messagingSenderId: "425067394100",
+  appId: "1:425067394100:web:4b71a9c92cbbf636234661"
+};
 
-const permintaanList = document.getElementById("permintaanList");
-const pinInput = document.getElementById("pinInput");
-const btnKirimPermintaan = document.getElementById("btnKirimPermintaan");
-
-const friendsList = document.getElementById("friendsList");
-
-const chatAreaSection = document.getElementById("chatAreaSection");
-const chatArea = document.getElementById("chatArea");
-const messageInput = document.getElementById("messageInput");
-const sendBtn = document.getElementById("sendBtn");
-const backToFriendsBtn = document.getElementById("backToFriendsBtn");
-const chatPartnerName = document.getElementById("chatPartnerName");
-const chatPartnerPIN = document.getElementById("chatPartnerPIN");
+// Inisialisasi Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
 
 let currentUser = null;
-let currentChatPartner = null;
-let messagesListener = null;
+let currentUserId = null;
+let friendsList = new Set();
+let incomingFriendRequests = [];
+let outgoingFriendRequests = [];
 
-/**
- * Generate PIN 6 digit unik
- */
-function generatePIN() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+// Elemen DOM utama
+const loginSection = document.getElementById('login-section');
+const chatSection = document.getElementById('chat-section');
+const usernameInput = document.getElementById('username-input');
+const btnLogin = document.getElementById('btn-login');
+const btnLogout = document.getElementById('btn-logout');
+const userStatusDisplay = document.getElementById('user-status');
+const friendListElem = document.getElementById('friend-list');
+const requestListElem = document.getElementById('friend-request-list');
+const requestSendInput = document.getElementById('friend-request-input');
+const btnSendRequest = document.getElementById('btn-send-request');
+const chatBox = document.getElementById('chat-box');
+const messageInput = document.getElementById('message-input');
+const btnSendMessage = document.getElementById('btn-send-message');
+const friendChatTitle = document.getElementById('friend-chat-title');
 
-/**
- * Simpan user baru ke Firebase
- */
-async function saveUser(user) {
-  await db.ref(`users/${user.pin}`).set({
-    nama: user.nama,
-    online: true
-  });
-}
+let activeChatFriendId = null;
 
-/**
- * Update status online user
- */
-async function setOnlineStatus(pin, status) {
-  await db.ref(`users/${pin}/online`).set(status);
-}
-
-/**
- * Login user
- */
-async function login() {
-  const nama = namaInput.value.trim();
-  if (!nama) {
-    alert("Mohon isi nama kamu.");
+// Fungsi login anonymous dengan set username
+btnLogin.addEventListener('click', () => {
+  const username = usernameInput.value.trim();
+  if (!username) {
+    alert('Masukkan username');
     return;
   }
 
-  if (localStorage.getItem("pin") && localStorage.getItem("nama")) {
-    // Login otomatis dari localStorage
-    currentUser = {
-      pin: localStorage.getItem("pin"),
-      nama: localStorage.getItem("nama"),
-    };
-    await setOnlineStatus(currentUser.pin, true);
-    afterLogin();
+  signInAnonymously(auth).then(() => {
+    currentUser = auth.currentUser;
+    currentUserId = currentUser.uid;
+    // Simpan username ke database agar bisa tampil
+    set(ref(db, 'users/' + currentUserId), {
+      username: username,
+      online: true,
+      lastOnline: Date.now()
+    });
+    initAppAfterLogin();
+  }).catch((error) => {
+    alert('Login gagal: ' + error.message);
+  });
+});
+
+function initAppAfterLogin() {
+  loginSection.style.display = 'none';
+  chatSection.style.display = 'block';
+  userStatusDisplay.textContent = `Anda login sebagai: ${usernameInput.value.trim()}`;
+  listenFriendRequests();
+  listenFriends();
+  listenOnlineStatus();
+  setupLogout();
+  listenMessages();
+  updateOnlineStatus(true);
+}
+
+function setupLogout() {
+  btnLogout.addEventListener('click', () => {
+    updateOnlineStatus(false).then(() => {
+      signOut(auth).then(() => {
+        location.reload();
+      });
+    });
+  });
+}
+
+function updateOnlineStatus(isOnline) {
+  if (!currentUserId) return Promise.resolve();
+  return update(ref(db, 'users/' + currentUserId), {
+    online: isOnline,
+    lastOnline: Date.now()
+  });
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    currentUserId = user.uid;
+    get(ref(db, 'users/' + currentUserId + '/username')).then(snapshot => {
+      if (snapshot.exists()) {
+        usernameInput.value = snapshot.val();
+      }
+    });
+    if (user) {
+      loginSection.style.display = 'none';
+      chatSection.style.display = 'block';
+      userStatusDisplay.textContent = `Anda login sebagai: ${usernameInput.value.trim()}`;
+      listenFriendRequests();
+      listenFriends();
+      listenOnlineStatus();
+      setupLogout();
+      listenMessages();
+      updateOnlineStatus(true);
+    }
   } else {
-    // Buat user baru
-    const pin = generatePIN();
-
-    // Cek apakah PIN sudah dipakai (loop bila perlu)
-    let pinExists = await db.ref(`users/${pin}`).once("value");
-    while (pinExists.exists()) {
-      pin = generatePIN();
-      pinExists = await db.ref(`users/${pin}`).once("value");
-    }
-
-    currentUser = { nama, pin };
-    try {
-      await saveUser(currentUser);
-      localStorage.setItem("pin", pin);
-      localStorage.setItem("nama", nama);
-      await setOnlineStatus(pin, true);
-      afterLogin();
-    } catch (err) {
-      alert("Gagal login: " + err.message);
-    }
+    loginSection.style.display = 'block';
+    chatSection.style.display = 'none';
   }
-}
+});
 
-/**
- * Setelah login sukses
- */
-function afterLogin() {
-  userName.textContent = currentUser.nama;
-  userPIN.textContent = currentUser.pin;
-  loginSection.classList.add("hidden");
-  chatSection.classList.remove("hidden");
-  chatAreaSection.classList.add("hidden");
-  loadPermintaan();
-  loadFriends();
-}
+// ------------------ PERMOHONAN PERTEMANAN -----------------
 
-/**
- * Logout user
- */
-async function logout() {
-  if (!currentUser) return;
-  await setOnlineStatus(currentUser.pin, false);
-  localStorage.clear();
-  location.reload();
-}
-
-/**
- * Kirim permintaan pertemanan
- */
-async function kirimPermintaan() {
-  const pinTeman = pinInput.value.trim();
-
-  if (!pinTeman) {
-    alert("Masukkan PIN teman.");
-    return;
-  }
-  if (pinTeman === currentUser.pin) {
-    alert("Tidak bisa mengirim permintaan ke diri sendiri.");
+btnSendRequest.addEventListener('click', () => {
+  const requestedUsername = requestSendInput.value.trim();
+  if (!requestedUsername) {
+    alert('Masukkan username teman yang ingin diminta');
     return;
   }
 
-  // Cek apakah PIN teman ada
-  const userSnap = await db.ref(`users/${pinTeman}`).once("value");
-  if (!userSnap.exists()) {
-    alert("PIN teman tidak ditemukan.");
-    return;
-  }
-
-  // Cek sudah jadi teman
-  const friendSnap = await db.ref(`users/${currentUser.pin}/friends/${pinTeman}`).once("value");
-  if (friendSnap.exists()) {
-    alert("Sudah menjadi teman.");
-    return;
-  }
-
-  // Cek sudah kirim permintaan
-  const requestSentSnap = await db.ref(`requests/${pinTeman}/${currentUser.pin}`).once("value");
-  if (requestSentSnap.exists()) {
-    alert("Permintaan sudah dikirim sebelumnya.");
-    return;
-  }
-
-  await db.ref(`requests/${pinTeman}/${currentUser.pin}`).set(true);
-  alert("Permintaan pertemanan berhasil dikirim.");
-  pinInput.value = "";
-}
-
-/**
- * Load permintaan pertemanan masuk dan render
- */
-function loadPermintaan() {
-  db.ref(`requests/${currentUser.pin}`).on("value", async (snapshot) => {
-    permintaanList.innerHTML = "";
-    const requests = snapshot.val();
-
-    if (!requests) {
-      permintaanList.innerHTML = "<em>Tidak ada permintaan.</em>";
+  // Cari user berdasarkan username
+  const usersRef = ref(db, 'users');
+  get(query(usersRef)).then(snapshot => {
+    if (!snapshot.exists()) {
+      alert('User tidak ditemukan');
       return;
     }
-
-    for (const pinPengirim of Object.keys(requests)) {
-      const namaSnap = await db.ref(`users/${pinPengirim}/nama`).once("value");
-      const namaPengirim = namaSnap.val() || pinPengirim;
-
-      const div = document.createElement("div");
-      div.classList.add("request-item");
-      div.textContent = `${namaPengirim} (PIN: ${pinPengirim})`;
-
-      const btnTerima = document.createElement("button");
-      btnTerima.textContent = "Terima";
-      btnTerima.classList.add("btn-accept");
-      btnTerima.onclick = () => terimaPermintaan(pinPengirim);
-
-      const btnTolak = document.createElement("button");
-      btnTolak.textContent = "Tolak";
-      btnTolak.classList.add("btn-reject");
-      btnTolak.onclick = () => tolakPermintaan(pinPengirim);
-
-      div.appendChild(btnTerima);
-      div.appendChild(btnTolak);
-      permintaanList.appendChild(div);
+    let foundUserId = null;
+    snapshot.forEach(childSnap => {
+      if (childSnap.val().username === requestedUsername) {
+        foundUserId = childSnap.key;
+      }
+    });
+    if (!foundUserId) {
+      alert('User tidak ditemukan');
+      return;
     }
+    if (foundUserId === currentUserId) {
+      alert('Anda tidak bisa mengirim permintaan ke diri sendiri');
+      return;
+    }
+    // Cek apakah sudah teman
+    if (friendsList.has(foundUserId)) {
+      alert('User ini sudah teman Anda');
+      return;
+    }
+    // Cek apakah sudah ada permintaan terkirim
+    if (outgoingFriendRequests.includes(foundUserId)) {
+      alert('Permintaan sudah dikirim sebelumnya');
+      return;
+    }
+    // Simpan permintaan teman ke database di node "friendRequests"
+    const friendRequestRef = ref(db, `friendRequests/${foundUserId}/${currentUserId}`);
+    set(friendRequestRef, {
+      from: currentUserId,
+      to: foundUserId,
+      status: "pending",
+      timestamp: Date.now()
+    }).then(() => {
+      alert('Permintaan pertemanan terkirim!');
+      outgoingFriendRequests.push(foundUserId);
+      renderFriendRequests();
+      requestSendInput.value = '';
+    });
+  });
+});
+
+function listenFriendRequests() {
+  if (!currentUserId) return;
+  const friendReqRef = ref(db, `friendRequests/${currentUserId}`);
+  onValue(friendReqRef, (snapshot) => {
+    incomingFriendRequests = [];
+    if (snapshot.exists()) {
+      snapshot.forEach(childSnap => {
+        if (childSnap.val().status === "pending") {
+          incomingFriendRequests.push({
+            from: childSnap.key,
+            data: childSnap.val()
+          });
+        }
+      });
+    }
+    renderFriendRequests();
   });
 }
 
-/**
- * Terima permintaan pertemanan
- */
-async function terimaPermintaan(pinPengirim) {
-  try {
-    // Update friends dan hapus request
-    let updates = {};
-    updates[`users/${currentUser.pin}/friends/${pinPengirim}`] = true;
-    updates[`users/${pinPengirim}/friends/${currentUser.pin}`] = true;
-    updates[`requests/${currentUser.pin}/${pinPengirim}`] = null;
-
-    await db.ref().update(updates);
-    alert("Permintaan diterima.");
-    loadFriends();
-  } catch (err) {
-    alert("Gagal terima permintaan: " + err.message);
+function renderFriendRequests() {
+  requestListElem.innerHTML = '';
+  if (incomingFriendRequests.length === 0) {
+    requestListElem.innerHTML = '<p>Tidak ada permintaan pertemanan</p>';
+    return;
   }
-}
+  incomingFriendRequests.forEach(req => {
+    get(ref(db, `users/${req.from}/username`)).then(snapshot => {
+      const username = snapshot.exists() ? snapshot.val() : "Unknown";
+      const div = document.createElement('div');
+      div.classList.add('friend-request-item');
+      div.innerHTML = `
+        <span><strong>${username}</strong> ingin berteman dengan Anda</span>
+        <button class="btn-accept" data-from="${req.from}">Terima</button>
+        <button class="btn-reject" data-from="${req.from}">Tolak</button>
+      `;
+      requestListElem.appendChild(div);
 
-/**
- * Tolak permintaan
- */
-async function tolakPermintaan(pinPengirim) {
-  try {
-    await db.ref(`requests/${currentUser.pin}/${pinPengirim}`).remove();
-    alert("Permintaan ditolak.");
-  } catch (err) {
-    alert("Gagal tolak permintaan: " + err.message);
-  }
-}
-
-/**
- * Load daftar teman dan render
- */
-function loadFriends() {
-  db.ref(`users/${currentUser.pin}/friends`).on("value", async (snapshot) => {
-    friendsList.innerHTML = "";
-    const friends = snapshot.val();
-
-    if (!friends) {
-      friendsList.innerHTML = "<li><em>Belum ada teman</em></li>";
-      return;
-    }
-
-    for (const pinTeman of Object.keys(friends)) {
-      const namaSnap = await db.ref(`users/${pinTeman}/nama`).once("value");
-      const namaTeman = namaSnap.val() || pinTeman;
-
-      const li = document.createElement("li");
-      li.textContent = `${namaTeman} (PIN: ${pinTeman})`;
-      li.style.cursor = "pointer";
-      li.onclick = () => bukaChatTeman(pinTeman, namaTeman);
-
-      friendsList.appendChild(li);
-    }
+      div.querySelector('.btn-accept').addEventListener('click', () => {
+        acceptFriendRequest(req.from);
+      });
+      div.querySelector('.btn-reject').addEventListener('click', () => {
+        rejectFriendRequest(req.from);
+      });
+    });
   });
 }
 
-/**
- * Buka chat dengan teman tertentu
- */
-function bukaChatTeman(pinTeman, namaTeman) {
-  currentChatPartner = { pin: pinTeman, nama: namaTeman };
-  chatPartnerName.textContent = namaTeman;
-  chatPartnerPIN.textContent = pinTeman;
+function acceptFriendRequest(fromUserId) {
+  // Tambahkan dua arah ke friend list
+  const updates = {};
+  updates[`friends/${currentUserId}/${fromUserId}`] = true;
+  updates[`friends/${fromUserId}/${currentUserId}`] = true;
+  // Update status permintaan jadi accepted dan hapus
+  updates[`friendRequests/${currentUserId}/${fromUserId}`] = null;
 
-  chatAreaSection.classList.remove("hidden");
-  chatSection.querySelector("#permintaanSection").classList.add("hidden");
-  chatSection.querySelector("#cariTemanSection").classList.add("hidden");
-  chatSection.querySelector("#friendsSection").classList.add("hidden");
-
-  loadChatMessages(pinTeman);
+  update(ref(db), updates).then(() => {
+    alert('Permintaan pertemanan diterima!');
+    listenFriends();  // Refresh teman
+  });
 }
 
-/**
- * Sembunyikan area chat dan tampilkan daftar teman & lainnya
- */
-function sembunyikanChatArea() {
-  currentChatPartner = null;
-  chatAreaSection.classList.add("hidden");
-  chatSection.querySelector("#permintaanSection").classList.remove("hidden");
-  chatSection.querySelector("#cariTemanSection").classList.remove("hidden
+function rejectFriendRequest(fromUserId) {
+  remove(ref(db, `friendRequests/${currentUserId}/${fromUserId}`)).then(() => {
+    alert('Permintaan pertemanan ditolak');
+    listenFriendRequests();
+  });
+}
+
+// ------------------ DAFTAR TEMAN -----------------
+
+function listenFriends() {
+  if (!currentUserId) return;
+  const friendsRef = ref(db, `friends/${currentUserId}`);
+  onValue(friendsRef, (snapshot) => {
+    friendsList.clear();
+    if (snapshot.exists()) {
+      snapshot.forEach(childSnap => {
+        friendsList.add(childSnap.key);
+      });
+    }
+    renderFriends();
+  });
+}
+
+function renderFriends() {
+  friendListElem.innerHTML = '';
+  if (friendsList.size === 0) {
+    friendListElem.innerHTML = '<p>Anda belum memiliki teman</p>';
+    return;
+  }
+  friendsList.forEach(friendId => {
+    get(ref(db, `users/${friendId}/username`)).then(snapshot => {
+      const username = snapshot.exists() ? snapshot.val() : "Unknown";
+      const li = document.createElement('li');
+      li.textContent = username;
+      li.classList.add('friend-item');
+      li.dataset.friendId = friendId;
+      li.addEventListener('click', () => {
+        openChatWithFriend(friendId, username);
+      });
+      friendListElem.appendChild(li);
+    });
+  });
+}
+
+// ------------------ CHAT -------------------
+
+function openChatWithFriend(friendId, friendUsername) {
+  activeChatFriendId = friendId;
+  friendChatTitle.textContent = `Chat dengan ${friendUsername}`;
+  chatBox.innerHTML = '';
+  listenChatMessages(friendId);
+}
+
+function listenChatMessages(friendId) {
+  if (!currentUserId) return;
+
+  const chatId = getChatId(currentUserId, friendId);
+  const chatRef = ref(db, `chats/${chatId}/messages`);
+
+  onValue(chatRef, (snapshot) => {
+    chatBox.innerHTML = '';
+    if (!snapshot.exists()) return;
+    const msgs = [];
+    snapshot.forEach(childSnap => {
+      msgs.push(childSnap.val());
+    });
+    msgs.sort((a, b) => a.timestamp - b.timestamp);
+
+    msgs.forEach(msg => {
+      const div = document.createElement('div');
+      div.classList.add('chat-message');
+      div.classList.add(msg.from === currentUserId ? 'sent' : 'received');
+      div.textContent = `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.text}`;
+      chatBox.appendChild(div);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+}
+
+function getChatId(userA, userB) {
+  return userA < userB ? userA + '_' + userB : userB + '_' + userA;
+}
+
+btnSendMessage.addEventListener('click', () => {
+  sendMessage();
+});
+
+messageInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+function sendMessage() {
+  if (!activeChatFriendId) {
+    alert('Pilih teman dulu untuk chat');
+    return;
+  }
+  const msg = messageInput.value.trim();
+  if (!msg) return;
+
+  const chatId = getChatId(currentUserId, activeChatFriendId);
+  const messagesRef = ref(db, `chats/${chatId}/messages`);
+  const newMsgRef = push(messagesRef);
+  set(newMsgRef, {
+    from: currentUserId,
+    to: activeChatFriendId,
+    text: msg,
+    timestamp: Date.now()
+  }).then(() => {
+    messageInput.value = '';
+  });
+}
+
+// ------------------ STATUS ONLINE -----------------
+
+function listenOnlineStatus() {
+  if (!currentUserId) return;
+  const usersRef = ref(db, 'users');
+  onValue(usersRef, (snapshot) => {
+    // Update tampilan teman dengan status online
+    const friendItems = document.querySelectorAll('.friend-item');
+    friendItems.forEach(item => {
+      const friendId = item.dataset.friendId;
+      const userData = snapshot.child(friendId);
+      if (userData.exists()) {
+        if (userData.val().online) {
+          item.classList.add('online');
+        } else {
+          item.classList.remove('online');
+        }
+      }
+    });
+  });
+}
+
+// Update status online saat window ditutup/tidak aktif
+window.addEventListener('beforeunload', () => {
+  updateOnlineStatus(false);
+});
