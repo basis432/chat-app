@@ -72,4 +72,60 @@ function generateOrLoadPIN(uid) {
 // Fungsi pembuat PIN BBM unik 6 digit
 function generatePIN() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+  function sendFriendRequest() {
+  const pin = document.getElementById('friend-pin').value.trim();
+
+  // Cek apakah PIN valid dan bukan milik sendiri
+  if (pin === "" || currentUser == null) return alert("PIN tidak boleh kosong.");
+
+  firebase.database().ref('users').once('value').then(snapshot => {
+    let found = false;
+    snapshot.forEach(child => {
+      const data = child.val();
+      if (data.pin === pin && child.key !== currentUser.uid) {
+        found = true;
+
+        // Tambahkan permintaan ke user target
+        firebase.database().ref(`users/${child.key}/requests/${currentUser.uid}`).set({
+          email: currentUser.email
+        });
+
+        alert("Permintaan terkirim ke " + data.email);
+      }
+    });
+
+    if (!found) alert("PIN tidak ditemukan.");
+  });
+}
+
+function loadFriendRequests() {
+  const reqRef = firebase.database().ref(`users/${currentUser.uid}/requests`);
+  reqRef.on('value', (snapshot) => {
+    const container = document.getElementById('requests-container');
+    container.innerHTML = "<h4>Permintaan Masuk:</h4>";
+
+    snapshot.forEach(child => {
+      const fromId = child.key;
+      const email = child.val().email;
+      const el = document.createElement('div');
+      el.innerHTML = `
+        <p>${email} <button onclick="acceptRequest('${fromId}', '${email}')">Terima</button></p>
+      `;
+      container.appendChild(el);
+    });
+  });
+}
+
+function acceptRequest(fromId, email) {
+  const uid = currentUser.uid;
+
+  // Tambahkan ke daftar teman masing-masing
+  firebase.database().ref(`users/${uid}/friends/${fromId}`).set({ email: email });
+  firebase.database().ref(`users/${fromId}/friends/${uid}`).set({ email: currentUser.email });
+
+  // Hapus permintaan
+  firebase.database().ref(`users/${uid}/requests/${fromId}`).remove();
+  alert("Sekarang kamu dan " + email + " sudah berteman!");
+}
+
 }
