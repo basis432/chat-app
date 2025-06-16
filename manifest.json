@@ -1,15 +1,9 @@
 {
-  "name": "BBM Clone",
-  "short_name": "BBM",
+  "name": "Aplikasi Chat BBM Style",
+  "short_name": "CHATBBMYAHMAR",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#000",
-  "description": "Aplikasi Chat BBM-style",
-  "icons": [
-    {
-      "src": "icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#ffffff",
+  "description": "Chat menggunakan sistem PIN seperti BBM!",
+  "icons": []
 }
