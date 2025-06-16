@@ -17,6 +17,13 @@
     </div>
 
     <div id="chat-container" style="display:none;">
+      <hr>
+<h3>Tambah Teman via PIN</h3>
+<input type="text" id="friend-pin" placeholder="Masukkan PIN Teman">
+<button onclick="sendFriendRequest()">Kirim Permintaan</button>
+
+<div id="requests-container"></div>
+
       <p>Selamat datang, <span id="user-email"></span></p>
       <p><strong>PIN Anda:</strong> <span id="user-pin"></span></p>
       <button onclick="logout()">Keluar</button>
