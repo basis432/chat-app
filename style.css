@@ -1,24 +1,33 @@
 body {
   font-family: sans-serif;
-  background: #e9ecef;
+  background-color: #111;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 500px;
+  margin: auto;
   padding: 20px;
 }
 
 input, button {
+  width: 100%;
   padding: 10px;
   margin: 5px 0;
-  width: 100%;
-  max-width: 300px;
-  display: block;
+  box-sizing: border-box;
+  border-radius: 5px;
+  font-size: 16px;
 }
 
 button {
-  background: #007bff;
+  background: #00bcd4;
   color: white;
   border: none;
-  cursor: pointer;
 }
 
-button:hover {
-  background: #0056b3;
+ul {
+  list-style: none;
+  padding: 0;
 }
